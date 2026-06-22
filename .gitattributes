@@ -1,0 +1,30 @@
+# Track processed dataset CSVs with Git LFS so the repo can host them
+# directly without bloating regular git history. Initialise once per clone:
+#
+#     git lfs install
+#
+# and pull data files with:
+#
+#     git lfs pull
+#
+data/ashrae/processed/*.csv filter=lfs diff=lfs merge=lfs -text
+data/lead/processed/*.csv   filter=lfs diff=lfs merge=lfs -text
+
+# Trained model weights — each .pt is a few MB and not git-diff-friendly.
+checkpoints/*.pt filter=lfs diff=lfs merge=lfs -text
+
+# Split-metadata JSONs are small; keep them in regular git so diffs are readable.
+data/**/processed/split_metadata.json -text
+
+# Normalise line endings for source files.
+*.py     text eol=lf
+*.md     text eol=lf
+*.json   text eol=lf
+*.yaml   text eol=lf
+*.yml    text eol=lf
+
+# Images and PDFs are binary.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.pdf  binary
