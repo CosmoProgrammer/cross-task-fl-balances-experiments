@@ -173,16 +173,21 @@ def main():
     tasks = ["forecasting", "anomaly"] if args.task == "both" else [args.task]
 
     if args.sweep:
-        # Batch scaling: launch-bound work should give ~linear throughput gains.
+        # Batch scaling. On the kernel path the giant (B,L,D,N) scan
+        # intermediates are gone, so re-test whether a bigger batch now improves
+        # throughput (the old eager verdict was flat-then-OOM). Falls back to the
+        # eager fp32+ckpt sweep when the kernel isn't installed.
+        use_k = mm._HAS_SELECTIVE_SCAN
+        label = "mamba kernel, -ckpt" if use_k else "fp32, ckpt (eager)"
         for task in tasks:
-            print(f"=== {task}: batch sweep (fp32, ckpt) ===")
+            print(f"=== {task}: batch sweep ({label}) ===")
             base_per = None
-            for B in [32, 64, 128, 256]:
+            for B in [32, 64, 128, 256, 512]:
                 config.batch_size = B
                 try:
                     ms = time_condition(config, task, device,
-                                        tf32=False, amp=False, ckpt=True,
-                                        warmup=5, iters=15)
+                                        tf32=use_k, amp=False, ckpt=not use_k,
+                                        kernel=use_k, warmup=5, iters=15)
                 except RuntimeError as e:
                     print(f"  batch {B:4d}: OOM/err ({str(e)[:40]})")
                     torch.cuda.empty_cache()
@@ -205,6 +210,11 @@ def main():
             ("mamba kernel (ckpt)",     dict(tf32=True, amp=False, ckpt=True,
                                             kernel=True)),
             ("mamba kernel -ckpt",      dict(tf32=True, amp=False, ckpt=False,
+                                            kernel=True)),
+            # Re-test bf16 on top of the best path: yesterday's "bf16 useless"
+            # was the eager regime where matmuls were ~3-5%. With the scan storm
+            # gone the lane MLPs dominate, so AMP may now help (or not -- measure).
+            ("mamba kernel +bf16 -ckpt", dict(tf32=True, amp=True, ckpt=False,
                                             kernel=True)),
         ]
     else:

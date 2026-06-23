@@ -91,7 +91,12 @@ class ExperimentConfig:
 
     # ── DataLoader ──
     batch_size: int = 32
-    num_workers: int = 0
+    # Platform-aware default: 0 on Windows (spawn-based workers are slow and the
+    # dev laptop runs eager anyway), 8 on Linux. With the fused kernel a step is
+    # ~22ms, so a single-process loader becomes the bottleneck on the server;
+    # pin_memory + persistent_workers are already wired on (data_provider/*). The
+    # `crosstask` GPU server should keep this >0. Override here to change it.
+    num_workers: int = 0 if os.name == "nt" else 8
 
     # ── Performance ──
     # Fused mamba-ssm / causal-conv1d kernels: used when importable AND on CUDA

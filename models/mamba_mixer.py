@@ -45,6 +45,20 @@ except ImportError:
 USE_KERNELS = True
 
 
+def _maybe_checkpoint(fn, h):
+    """Gradient-checkpoint the SSM block ONLY on the eager path.
+
+    Checkpointing exists to avoid retaining the eager Hillis-Steele scan's huge
+    autograd graph (without it the eager path is ~5x slower). The fused kernel
+    never materializes that graph, so checkpoint recompute is pure overhead there
+    -- disabling it is ~1.5x faster (measured on the 4090). Gate matches the
+    kernel dispatch in SelectiveSSM.forward so the two stay consistent.
+    """
+    if USE_KERNELS and _HAS_SELECTIVE_SCAN and h.is_cuda:
+        return fn(h)
+    return grad_checkpoint(fn, h, use_reentrant=False)
+
+
 def get_activation(name):
     return {"gelu": nn.GELU(), "relu": nn.ReLU(), "sigmoid": nn.Sigmoid(),
             "tanh": nn.Tanh()}[name]
@@ -318,7 +332,7 @@ class SSMPatchEncoder(nn.Module):
         x = self.norm2(x)
         B, C, L1, L2 = x.shape
         h = x.reshape(B * C, L1, L2)
-        h = grad_checkpoint(self._ssm_forward, h, use_reentrant=False)
+        h = _maybe_checkpoint(self._ssm_forward, h)
         x = x + h.reshape(B, C, L1, L2)
 
         x = self.intra_patch_mlp(self.norm3(x))
@@ -362,7 +376,7 @@ class SSMPatchDecoder(nn.Module):
         x = self.norm2(x)
         B, C, L1, L2 = x.shape
         h = x.reshape(B * C, L1, L2)
-        h = grad_checkpoint(self._ssm_forward, h, use_reentrant=False)
+        h = _maybe_checkpoint(self._ssm_forward, h)
         x = x + h.reshape(B, C, L1, L2)
 
         x = self.channel_mlp(self.norm3(x))
