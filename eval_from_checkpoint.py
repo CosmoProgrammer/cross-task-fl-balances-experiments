@@ -47,9 +47,12 @@ def main():
     ap.add_argument("--an-ckpt", default="checkpoints/fed_anomaly_model.pt")
     ap.add_argument("--tag", default="reeval",
                     help="label for the output JSON (results/reeval_<tag>_results.json)")
+    ap.add_argument("--cohort", type=int, default=ExperimentConfig.cohort_size,
+                    help="Cohort size of the checkpoints being eval'd (default 50). "
+                         "Must match the run, so the right processed-data dir is read.")
     args = ap.parse_args()
 
-    config = ExperimentConfig()
+    config = ExperimentConfig(cohort_size=args.cohort)
     device = get_device(config)
     log = setup_logger("eval_from_checkpoint", config.log_dir)
 

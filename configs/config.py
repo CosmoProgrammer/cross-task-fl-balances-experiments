@@ -30,7 +30,17 @@ class ExperimentConfig:
     ashrae_processed_dir: str = os.path.join(DATA_DIR, "ashrae", "processed")
     lead_processed_dir: str = os.path.join(DATA_DIR, "lead", "processed")
 
-    # ── Building splits (fixed) ──
+    # ── Building cohort ──
+    # cohort_size is the REAL knob (drives preprocess.py: `python preprocess.py
+    # --cohort N`). Cohort scaling ladder: 50 (anchor, done) -> 100 -> 200 -> 400.
+    # The test set is FIXED at 15 buildings across all cohorts (nested design), so
+    # n_*_test stays 15 and n_*_train = cohort_size - 15. Cohort 50 uses the
+    # original untagged data/results paths; larger cohorts are tagged `_c{N}`.
+    # LEAD has 400 buildings -> symmetric cohort caps at 400.
+    cohort_size: int = 50
+
+    # ── Building splits (DESCRIPTIVE — not consumed in logic; derived in
+    # __post_init__ from cohort_size. Building selection lives in split_metadata.json) ──
     n_total_ashrae: int = 50      # total ASHRAE buildings to select
     n_forecast_train: int = 35    # forecasting training clients
     n_forecast_test: int = 15     # forecasting test buildings
@@ -64,6 +74,10 @@ class ExperimentConfig:
     acf_cutoff: int = 2
 
     # ── Federated learning ──
+    # Kept at 10: forecasting flattens by ~round 8 (round 9->10 is only -0.4%), BUT
+    # anomaly was still improving — round 10 was its LARGEST late drop (-3.7%, vs
+    # -4.6% over rounds 8->10). Anomaly (the weaker task, recall ~0.36) hadn't
+    # converged, so trimming to 8 would starve it. Don't cut rounds for the sweep.
     num_rounds: int = 10
     local_epochs: int = 5
     client_lr: float = 1e-3
@@ -119,3 +133,23 @@ class ExperimentConfig:
     temporal_train: float = 0.70
     temporal_val: float = 0.20
     temporal_test: float = 0.10
+
+    def __post_init__(self):
+        """Derive cohort-dependent paths/labels. Cohort 50 keeps the original
+        untagged paths (committed data/results stay valid); larger cohorts use
+        `processed_c{N}` dirs and a `_c{N}` filename tag so cohorts coexist."""
+        if self.cohort_size != 50:
+            self.ashrae_processed_dir = os.path.join(
+                DATA_DIR, "ashrae", f"processed_c{self.cohort_size}")
+            self.lead_processed_dir = os.path.join(
+                DATA_DIR, "lead", f"processed_c{self.cohort_size}")
+        # Keep the descriptive counts honest (fixed-15-test, nested design).
+        self.n_total_ashrae = self.n_total_lead = self.cohort_size
+        self.n_forecast_train = self.n_anomaly_train = self.cohort_size - 15
+        self.n_forecast_test = self.n_anomaly_test = 15
+
+    @property
+    def cohort_tag(self):
+        """Filename suffix so cohort runs don't clobber each other and
+        --visualize can tell them apart. Empty for the 50-cohort (back-compat)."""
+        return "" if self.cohort_size == 50 else f"_c{self.cohort_size}"

@@ -106,22 +106,22 @@ def save_results(results, path, log):
     log.info("Results saved to %s", path)
 
 
-def _fed_result_filename(mode, strategy):
-    """Generate mode/strategy-specific result filename."""
-    return f"federated_{mode}_{strategy}_results.json"
+def _fed_result_filename(mode, strategy, tag=""):
+    """Generate mode/strategy(/cohort)-specific result filename."""
+    return f"federated_{mode}_{strategy}{tag}_results.json"
 
 
 # =====================================================================
 #  1. PREPROCESSING
 # =====================================================================
 
-def run_preprocessing(log):
+def run_preprocessing(config, log):
     from preprocess import preprocess_ashrae, preprocess_lead
     log.info("=" * 60)
-    log.info("STEP 1: PREPROCESSING")
+    log.info("STEP 1: PREPROCESSING (cohort=%d)", config.cohort_size)
     log.info("=" * 60)
-    ashrae_meta = preprocess_ashrae()
-    lead_meta = preprocess_lead()
+    ashrae_meta = preprocess_ashrae(config.cohort_size)
+    lead_meta = preprocess_lead(config.cohort_size)
     log.info("ASHRAE: %d train / %d test buildings",
              ashrae_meta['n_train_buildings'], ashrae_meta['n_test_buildings'])
     log.info("LEAD:   %d train / %d test buildings",
@@ -169,10 +169,10 @@ def run_federated(config, device, log):
     log.info("Anomaly head params:      %s", f"{an_params - backbone_params:,}")
 
     # CSV metric logger for per-round tracking
-    csv_name = f"federated_{mode}_{strategy}_rounds.csv"
+    csv_name = f"federated_{mode}_{strategy}{config.cohort_tag}_rounds.csv"
     csv_logger = CSVMetricsLogger(
         os.path.join(config.log_dir, csv_name),
-        ["round", "forecast_test_mse", "anomaly_test_mse"])
+        ["round", "forecast_test_mse", "anomaly_test_mse", "round_seconds"])
 
     # Train
     trainer = MultiTaskFederatedTrainer(
@@ -214,7 +214,9 @@ def run_federated(config, device, log):
         "experiment": "multi_task_federated",
         "aggregation_mode": mode,
         "fl_strategy": strategy,
+        "cohort_size": config.cohort_size,
         "config": {
+            "cohort_size": config.cohort_size,
             "num_rounds": config.num_rounds,
             "local_epochs": config.local_epochs,
             "n_forecast_clients": len(fc_client_loaders),
@@ -238,12 +240,12 @@ def run_federated(config, device, log):
         "training_time_seconds": elapsed,
     }
 
-    result_file = _fed_result_filename(mode, strategy)
+    result_file = _fed_result_filename(mode, strategy, config.cohort_tag)
     save_results(results, os.path.join(config.results_dir, result_file), log)
 
     # Save models
     os.makedirs(config.checkpoint_dir, exist_ok=True)
-    ckpt_prefix = f"fed_{mode}_{strategy}"
+    ckpt_prefix = f"fed_{mode}_{strategy}{config.cohort_tag}"
     torch.save(trainer.forecasting_model.state_dict(),
                os.path.join(config.checkpoint_dir,
                             f"{ckpt_prefix}_forecasting_model.pt"))
@@ -264,7 +266,7 @@ def run_centralized(config, device, log):
     log.info("STEP 3: CENTRALIZED BASELINES")
     log.info("=" * 60)
 
-    results = {}
+    results = {"cohort_size": config.cohort_size}
 
     # -- Centralized Forecasting --
     log.info("--- Centralized Forecasting ---")
@@ -302,7 +304,7 @@ def run_centralized(config, device, log):
 
     torch.save(trainer_fc.model.state_dict(),
                os.path.join(config.checkpoint_dir,
-                            "centralized_forecasting_model.pt"))
+                            f"centralized_forecasting_model{config.cohort_tag}.pt"))
 
     # -- Centralized Anomaly Detection --
     log.info("--- Centralized Anomaly Detection ---")
@@ -344,10 +346,10 @@ def run_centralized(config, device, log):
 
     torch.save(trainer_an.model.state_dict(),
                os.path.join(config.checkpoint_dir,
-                            "centralized_anomaly_model.pt"))
+                            f"centralized_anomaly_model{config.cohort_tag}.pt"))
 
     save_results(results, os.path.join(config.results_dir,
-                                        "centralized_results.json"), log)
+                                        f"centralized{config.cohort_tag}_results.json"), log)
     return results
 
 
@@ -408,10 +410,22 @@ def run_visualization(config, log):
 
     from visualization.plots import generate_all_plots
 
-    # Load all available federated results
+    def _file_cohort_tag(stem):
+        """Extract a trailing `_c<N>` cohort tag from a result-file stem, else ''.
+        (Cross-cohort comparison plots are a separate follow-up; for now --visualize
+        scopes to one cohort so cohorts aren't silently mixed into one figure.)"""
+        last = stem.rsplit("_", 1)[-1]
+        if last.startswith("c") and last[1:].isdigit():
+            return f"_{last}"
+        return ""
+
+    # Load federated results for the ACTIVE cohort only (config.cohort_tag).
     fed_results_all = {}
     for fname in os.listdir(config.results_dir):
         if fname.startswith("federated_") and fname.endswith("_results.json"):
+            stem = fname[len("federated_"):-len("_results.json")]
+            if _file_cohort_tag(stem) != config.cohort_tag:
+                continue
             fpath = os.path.join(config.results_dir, fname)
             with open(fpath) as f:
                 data = json.load(f)
@@ -429,7 +443,8 @@ def run_visualization(config, log):
         log.info("  Loaded legacy federated_results.json as dual_fedavg")
 
     # Load centralized results
-    cent_path = os.path.join(config.results_dir, "centralized_results.json")
+    cent_path = os.path.join(config.results_dir,
+                             f"centralized{config.cohort_tag}_results.json")
     cent_results = None
     if os.path.exists(cent_path):
         with open(cent_path) as f:
@@ -484,16 +499,29 @@ def main():
                         choices=["fedavg", "fedprox", "scaffold"],
                         default="fedavg",
                         help="FL strategy (default: fedavg)")
+    parser.add_argument("--cohort", type=int, default=ExperimentConfig.cohort_size,
+                        help="Buildings per dataset (default 50; ladder 100/200/400). "
+                             "Drives the processed-data dir AND the output tag, so "
+                             "preprocess and training/eval stay in sync. Run "
+                             "`preprocess.py --cohort N` first to build the data.")
+    parser.add_argument("--rounds", type=int, default=None,
+                        help="Override config.num_rounds. Use for a quick 1-round "
+                             "GPU/2-GPU validation (`--rounds 1`) BEFORE the sweep. "
+                             "WARNING: a short run still writes the canonical tagged "
+                             "result/checkpoints -> delete them before the real sweep, "
+                             "or the sweep script will SKIP that condition as 'done'.")
     args = parser.parse_args()
 
     run_all = not (args.preprocess or args.federated or args.centralized
                    or args.baselines or args.visualize)
 
-    config = ExperimentConfig()
-
-    # Set FL mode and strategy from CLI
+    # cohort_size must be set at construction (it drives __post_init__, which
+    # repoints the processed-data dirs); mode/strategy are plain attributes.
+    config = ExperimentConfig(cohort_size=args.cohort)
     config.aggregation_mode = args.mode
     config.fl_strategy = args.strategy
+    if args.rounds is not None:
+        config.num_rounds = args.rounds
 
     # Setup logging
     os.makedirs(config.log_dir, exist_ok=True)
@@ -501,6 +529,9 @@ def main():
 
     device = get_device(config)
     log.info("Device: %s", device)
+    log.info("Cohort: %d buildings/dataset (tag=%r) | ashrae=%s | lead=%s",
+             config.cohort_size, config.cohort_tag or "(none)",
+             config.ashrae_processed_dir, config.lead_processed_dir)
 
     # Fused mamba-ssm / causal-conv1d kernels (no-op fallback if not installed)
     import models.mamba_mixer as mamba_mixer
@@ -523,7 +554,7 @@ def main():
 
     # -- Preprocessing (only when explicitly requested) --
     if args.preprocess:
-        run_preprocessing(log)
+        run_preprocessing(config, log)
         return
 
     # Check that preprocessed data exists

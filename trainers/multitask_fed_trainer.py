@@ -20,6 +20,8 @@ After training:
 """
 import copy
 import logging
+import os
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
@@ -88,6 +90,7 @@ class MultiTaskFederatedTrainer:
             "round": [],
             "forecast_test_loss": [],
             "anomaly_test_loss": [],
+            "round_seconds": [],  # wall-clock per round (contention diagnosis)
         }
 
     def _verify_backbone_compatibility(self):
@@ -107,6 +110,26 @@ class MultiTaskFederatedTrainer:
         if self.aux_loss_fn is not None:
             return self.aux_loss_fn(model)
         return 0.0
+
+    def _save_latest_checkpoint(self, round_num):
+        """Overwrite a per-round 'latest' snapshot of the global models so a
+        mid-condition crash (e.g. server shutdown) preserves the last completed
+        round's weights instead of losing the whole multi-hour run. ~7MB, <1s ->
+        negligible vs a ~20min round. The final run_federated still writes the
+        canonical `*_model.pt`; these `*_latest.pt` are crash insurance and can be
+        re-eval'd via eval_from_checkpoint. Failure here never aborts training."""
+        try:
+            ckpt_dir = self.config.checkpoint_dir
+            os.makedirs(ckpt_dir, exist_ok=True)
+            tag = getattr(self.config, "cohort_tag", "")
+            prefix = f"fed_{self.aggregation_mode}_{self.fl_strategy}{tag}"
+            torch.save(self.forecasting_model.state_dict(),
+                       os.path.join(ckpt_dir, f"{prefix}_forecasting_latest.pt"))
+            torch.save(self.anomaly_model.state_dict(),
+                       os.path.join(ckpt_dir, f"{prefix}_anomaly_latest.pt"))
+        except Exception as e:  # crash insurance must never crash the run itself
+            self.log.warning("  per-round 'latest' checkpoint save failed "
+                             "(round %d): %s", round_num + 1, e)
 
     # ── Local training ──
 
@@ -564,6 +587,7 @@ class MultiTaskFederatedTrainer:
         use_parallel = len(self.devices) >= 2
 
         for round_num in range(self.config.num_rounds):
+            round_start = time.time()
             self.log.info("Round %d/%d | %d clients",
                          round_num + 1, self.config.num_rounds, total_clients)
 
@@ -643,13 +667,15 @@ class MultiTaskFederatedTrainer:
             if (round_num + 1) % eval_every == 0 or is_last:
                 fc_loss = self._eval_forecasting(forecast_test_loader)
                 an_loss = self._eval_anomaly(anomaly_test_loader)
+                round_seconds = time.time() - round_start
 
                 self.history["round"].append(round_num + 1)
                 self.history["forecast_test_loss"].append(fc_loss)
                 self.history["anomaly_test_loss"].append(an_loss)
+                self.history["round_seconds"].append(round_seconds)
 
-                self.log.info("  Forecast test MSE: %.6f | Anomaly test MSE: %.6f",
-                             fc_loss, an_loss)
+                self.log.info("  Forecast test MSE: %.6f | Anomaly test MSE: %.6f "
+                             "| round %.0fs", fc_loss, an_loss, round_seconds)
 
                 # CSV logging
                 if self.csv_logger is not None:
@@ -657,7 +683,11 @@ class MultiTaskFederatedTrainer:
                         "round": round_num + 1,
                         "forecast_test_mse": f"{fc_loss:.6f}",
                         "anomaly_test_mse": f"{an_loss:.6f}",
+                        "round_seconds": f"{round_seconds:.1f}",
                     })
+
+            # Per-round crash insurance (overwrites the '_latest' snapshot).
+            self._save_latest_checkpoint(round_num)
 
             # Free client models
             del forecast_models, anomaly_models

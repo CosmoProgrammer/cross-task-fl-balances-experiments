@@ -222,3 +222,7 @@ data/
 raw/
 ashrae-energy-prediction/
 energy-anomaly-detection/
+
+# Per-round crash-insurance checkpoints (transient; overwritten each round).
+# The canonical end-of-run weights are committed; these are not artifacts.
+checkpoints/*_latest.pt
