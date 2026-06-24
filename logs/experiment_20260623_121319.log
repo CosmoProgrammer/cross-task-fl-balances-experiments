@@ -1,0 +1,22 @@
+[2026-06-23 12:13:19] INFO | experiment | Device: cuda
+[2026-06-23 12:13:19] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
+[2026-06-23 12:13:19] INFO | experiment | ============================================================
+[2026-06-23 12:13:19] INFO | experiment | STEP 2: MULTI-TASK FEDERATED LEARNING
+[2026-06-23 12:13:19] INFO | experiment |   Mode: dual | Strategy: fedprox
+[2026-06-23 12:13:19] INFO | experiment | ============================================================
+[2026-06-23 12:13:32] INFO | experiment | Forecasting model params: 884,999
+[2026-06-23 12:13:32] INFO | experiment | Anomaly model params:     976,623
+[2026-06-23 12:13:32] INFO | experiment | Shared backbone params:   829,790
+[2026-06-23 12:13:32] INFO | experiment | Forecasting head params:  55,209
+[2026-06-23 12:13:32] INFO | experiment | Anomaly head params:      146,833
+[2026-06-23 12:13:32] INFO | experiment | Single-GPU mode on cuda (available: 2, max: 1)
+[2026-06-23 12:13:32] INFO | experiment | Backbone compatibility verified.
+[2026-06-23 12:13:32] INFO | experiment | Multi-Task Federated Training
+[2026-06-23 12:13:32] INFO | experiment |   Mode: dual | Strategy: fedprox
+[2026-06-23 12:13:32] INFO | experiment |   Forecasting clients: 35
+[2026-06-23 12:13:32] INFO | experiment |   Anomaly clients:     35
+[2026-06-23 12:13:32] INFO | experiment |   Total clients:       70
+[2026-06-23 12:13:32] INFO | experiment |   Rounds: 10, Local epochs: 5
+[2026-06-23 12:13:32] INFO | experiment |   GPUs: 1
+[2026-06-23 12:13:32] INFO | experiment |   FedProx mu: 0.0100
+[2026-06-23 12:13:32] INFO | experiment | Round 1/10 | 70 clients
