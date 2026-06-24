@@ -49,8 +49,8 @@ from data_provider.lead_dataset import (
 from trainers.multitask_fed_trainer import MultiTaskFederatedTrainer
 from trainers.centralized_trainer import CentralizedTrainer
 from utils.metrics import (
-    compute_forecasting_metrics, compute_anomaly_metrics,
-    find_threshold_on_validation)
+    compute_forecasting_metrics, compute_per_horizon_metrics,
+    compute_anomaly_metrics, find_threshold_on_validation)
 from utils.logging_utils import setup_logger, CSVMetricsLogger
 
 
@@ -192,6 +192,7 @@ def run_federated(config, device, log):
     log.info("--- Federated Forecasting Evaluation ---")
     fc_preds, fc_targets = trainer.evaluate_forecasting(fc_test_loader)
     fc_metrics = compute_forecasting_metrics(fc_targets, fc_preds)
+    fc_per_horizon = compute_per_horizon_metrics(fc_targets, fc_preds)
     for k, v in fc_metrics.items():
         fmt = f"{v:.6f}" if k != "mape" else f"{v:.2f}%"
         log.info("  %s: %s", k.upper(), fmt)
@@ -231,6 +232,7 @@ def run_federated(config, device, log):
             "anomaly_head": an_params - backbone_params,
         },
         "forecasting_metrics": fc_metrics,
+        "forecasting_per_horizon": fc_per_horizon,
         "anomaly_metrics": an_metrics,
         "history": history,
         "training_time_seconds": elapsed,
@@ -286,12 +288,14 @@ def run_centralized(config, device, log):
 
     fc_preds, fc_targets = trainer_fc.evaluate_forecasting(fc_test)
     fc_metrics = compute_forecasting_metrics(fc_targets, fc_preds)
+    fc_per_horizon = compute_per_horizon_metrics(fc_targets, fc_preds)
     for k, v in fc_metrics.items():
         fmt = f"{v:.6f}" if k != "mape" else f"{v:.2f}%"
         log.info("  %s: %s", k.upper(), fmt)
 
     results["centralized_forecasting"] = {
         "metrics": fc_metrics,
+        "per_horizon": fc_per_horizon,
         "training_time_seconds": fc_time,
         "history": trainer_fc.history,
     }
