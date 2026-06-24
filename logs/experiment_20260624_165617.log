@@ -1,0 +1,37 @@
+[2026-06-24 16:56:17] INFO | experiment | Device: cuda
+[2026-06-24 16:56:17] INFO | experiment | Cohort: 100 buildings/dataset (tag='_c100') | ashrae=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed_c100 | lead=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed_c100
+[2026-06-24 16:56:17] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
+[2026-06-24 16:56:17] INFO | experiment | ============================================================
+[2026-06-24 16:56:17] INFO | experiment | STEP 2: MULTI-TASK FEDERATED LEARNING
+[2026-06-24 16:56:17] INFO | experiment |   Mode: dual | Strategy: fedavg
+[2026-06-24 16:56:17] INFO | experiment | ============================================================
+[2026-06-24 16:57:19] INFO | experiment | Forecasting model params: 884,999
+[2026-06-24 16:57:19] INFO | experiment | Anomaly model params:     976,623
+[2026-06-24 16:57:19] INFO | experiment | Shared backbone params:   829,790
+[2026-06-24 16:57:19] INFO | experiment | Forecasting head params:  55,209
+[2026-06-24 16:57:19] INFO | experiment | Anomaly head params:      146,833
+[2026-06-24 16:57:19] INFO | experiment | Using 2 GPUs for parallel client training: [device(type='cuda', index=0), device(type='cuda', index=1)]
+[2026-06-24 16:57:19] INFO | experiment | Backbone compatibility verified.
+[2026-06-24 16:57:19] INFO | experiment | Multi-Task Federated Training
+[2026-06-24 16:57:19] INFO | experiment |   Mode: dual | Strategy: fedavg
+[2026-06-24 16:57:19] INFO | experiment |   Forecasting clients: 85
+[2026-06-24 16:57:19] INFO | experiment |   Anomaly clients:     85
+[2026-06-24 16:57:19] INFO | experiment |   Total clients:       170
+[2026-06-24 16:57:19] INFO | experiment |   Rounds: 1, Local epochs: 5
+[2026-06-24 16:57:19] INFO | experiment |   GPUs: 2
+[2026-06-24 16:57:19] INFO | experiment | Round 1/1 | 170 clients
+[2026-06-24 17:47:13] INFO | experiment |   Forecast test MSE: 0.299193 | Anomaly test MSE: 0.308304 | round 2993s
+[2026-06-24 17:47:30] INFO | experiment | FL training completed in 3011.3s
+[2026-06-24 17:47:30] INFO | experiment | --- Federated Forecasting Evaluation ---
+[2026-06-24 17:47:55] INFO | experiment |   MSE: 0.299206
+[2026-06-24 17:47:55] INFO | experiment |   RMSE: 0.546997
+[2026-06-24 17:47:55] INFO | experiment |   MAE: 0.279393
+[2026-06-24 17:47:55] INFO | experiment |   MAPE: 27.06%
+[2026-06-24 17:47:55] INFO | experiment |   SMAPE: 16.115572
+[2026-06-24 17:47:55] INFO | experiment |   WAPE: 6.958559
+[2026-06-24 17:47:55] INFO | experiment |   NRMSE: 0.136235
+[2026-06-24 17:47:55] INFO | experiment |   MASE: 3.506745
+[2026-06-24 17:47:55] INFO | experiment |   RSE: 0.297342
+[2026-06-24 17:47:55] INFO | experiment |   CORR: 0.955724
+[2026-06-24 17:47:55] INFO | experiment |   R2: 0.911588
+[2026-06-24 17:47:55] INFO | experiment | --- Federated Anomaly Detection Evaluation ---
