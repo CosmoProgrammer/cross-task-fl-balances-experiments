@@ -1,29 +1,62 @@
 # Cross-Task Federated Backbone Aggregation — runtime dependencies.
 # Python 3.10+ required. Install with: pip install -r requirements.txt
 
-# Core deep-learning stack.
-# Install a torch build that matches your CUDA driver from https://pytorch.org/get-started/
-# (the version pinned here works on CPU and on CUDA 11.8 / 12.1 wheels).
-torch>=2.1,<2.6
+# ── Core deep-learning stack ────────────────────────────────────────────
+# Install a torch build that matches your CUDA driver from
+# https://pytorch.org/get-started/ (this range works on CPU and on the
+# CUDA 12.1 / 12.4 wheel channels).
+#
+# torch>=2.8,<2.10 is the overlap between "newer than the repo's old <2.6
+# ceiling" and autogluon-multimodal / autogluon-timeseries 1.5.0's own
+# torch<2.10,>=2.6 requirement. Going to 2.10+ (e.g. the 2.12.0 that caused
+# the earlier conflicts) will reintroduce the autogluon mismatch.
+torch>=2.8,<2.10
 
 # Tensor reshaping used by MambaMixer and the MSD-Mixer baseline.
 einops>=0.7,<0.9
 
-# Data handling and classical ML utilities.
+# ── Data handling and classical ML utilities ───────────────────────────
 numpy>=1.24,<2.2
 pandas>=2.0,<2.3
-scikit-learn>=1.3,<1.6
+# >=1.6 is required by chronos-forecasting; capped <2 until autogluon /
+# chronos confirm scikit-learn 2.x support.
+scikit-learn>=1.6,<2
 
-# Plotting / figures.
+# ── Plotting / figures ──────────────────────────────────────────────────
 matplotlib>=3.7,<3.10
 seaborn>=0.12,<0.14
 
-# Progress reporting (used by trainers).
+# ── Progress reporting (used by trainers) ────────────────────────────────
 tqdm>=4.65
+
+# ── AutoML / forecasting baselines ───────────────────────────────────────
+# Pinned to the versions that were already resolved together previously;
+# if you bump any one of these, re-check the others against it.
+autogluon.multimodal==1.5.0
+autogluon.timeseries==1.5.0
+chronos-forecasting==2.2.2
+xgboost==3.1.3
+
+# ── Data / logging utilities pulled in by the stack above ───────────────
+datasets==4.0.0
+tensorboardx==2.6.5
+triad==1.0.2
+
+# Explicit pins for sub-dependencies the stack above declares but pip
+# doesn't always resolve tightly on its own:
+fsspec[http]>=2023.1.0,<=2025.3.0     # ceiling required by autogluon-multimodal & datasets
+protobuf>=3.20,<5                      # required by tensorboardx
+pyarrow>=6.0.1                         # required by triad
+nvidia-nccl-cu12; platform_system=="Linux"   # required by xgboost on Linux/CUDA
 
 # ── Optional acceleration (uncomment if you have a compatible CUDA toolchain) ──
 # Official Mamba selective-scan CUDA kernels. The model auto-falls back to a
 # pure-PyTorch BiMamba implementation when these are absent, so they are
-# strictly a speed optimisation.
+# strictly a speed optimisation. Install these AFTER the block above, and
+# with --no-build-isolation so the build targets your already-installed
+# torch instead of a mismatched one pip would otherwise fetch:
+#   pip install -r requirements.txt
+#   pip install causal-conv1d>=1.4 --no-build-isolation
+#   pip install mamba-ssm>=2.0 --no-build-isolation
 # mamba-ssm>=2.0
 # causal-conv1d>=1.4
