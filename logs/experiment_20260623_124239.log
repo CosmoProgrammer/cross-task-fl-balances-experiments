@@ -1,0 +1,41 @@
+[2026-06-23 12:42:39] INFO | experiment | Device: cuda
+[2026-06-23 12:42:39] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
+[2026-06-23 12:42:39] INFO | experiment | ============================================================
+[2026-06-23 12:42:39] INFO | experiment | STEP 2: MULTI-TASK FEDERATED LEARNING
+[2026-06-23 12:42:39] INFO | experiment |   Mode: dual | Strategy: fedavg
+[2026-06-23 12:42:39] INFO | experiment | ============================================================
+[2026-06-23 12:42:51] INFO | experiment | Forecasting model params: 884,999
+[2026-06-23 12:42:51] INFO | experiment | Anomaly model params:     976,623
+[2026-06-23 12:42:51] INFO | experiment | Shared backbone params:   829,790
+[2026-06-23 12:42:51] INFO | experiment | Forecasting head params:  55,209
+[2026-06-23 12:42:51] INFO | experiment | Anomaly head params:      146,833
+[2026-06-23 12:42:51] INFO | experiment | Single-GPU mode on cuda (available: 2, max: 1)
+[2026-06-23 12:42:51] INFO | experiment | Backbone compatibility verified.
+[2026-06-23 12:42:51] INFO | experiment | Multi-Task Federated Training
+[2026-06-23 12:42:51] INFO | experiment |   Mode: dual | Strategy: fedavg
+[2026-06-23 12:42:51] INFO | experiment |   Forecasting clients: 35
+[2026-06-23 12:42:51] INFO | experiment |   Anomaly clients:     35
+[2026-06-23 12:42:51] INFO | experiment |   Total clients:       70
+[2026-06-23 12:42:51] INFO | experiment |   Rounds: 1, Local epochs: 5
+[2026-06-23 12:42:51] INFO | experiment |   GPUs: 1
+[2026-06-23 12:42:51] INFO | experiment | Round 1/1 | 70 clients
+[2026-06-23 13:04:39] INFO | experiment |   Forecast test MSE: 0.302593 | Anomaly test MSE: 0.316749
+[2026-06-23 13:04:39] INFO | experiment | FL training completed in 1307.7s
+[2026-06-23 13:04:39] INFO | experiment | --- Federated Forecasting Evaluation ---
+[2026-06-23 13:04:58] INFO | experiment |   MSE: 0.302606
+[2026-06-23 13:04:58] INFO | experiment |   RMSE: 0.550096
+[2026-06-23 13:04:58] INFO | experiment |   MAE: 0.282251
+[2026-06-23 13:04:58] INFO | experiment |   MAPE: 27.06%
+[2026-06-23 13:04:58] INFO | experiment |   R2: 0.910583
+[2026-06-23 13:04:58] INFO | experiment | --- Federated Anomaly Detection Evaluation ---
+[2026-06-23 13:05:10] INFO | experiment |   Threshold (from val): 0.355434
+[2026-06-23 13:05:38] INFO | experiment |   F1: 0.4741
+[2026-06-23 13:05:38] INFO | experiment |   AUC_ROC: 0.7431
+[2026-06-23 13:05:38] INFO | experiment |   AUC_PR: 0.5606
+[2026-06-23 13:05:38] INFO | experiment |   PRECISION: 0.5215
+[2026-06-23 13:05:38] INFO | experiment |   RECALL: 0.4346
+[2026-06-23 13:05:38] INFO | experiment | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/federated_dual_fedavg_results.json
+[2026-06-23 13:05:38] INFO | experiment | Models saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/checkpoints
+[2026-06-23 13:05:40] INFO | experiment | ============================================================
+[2026-06-23 13:05:40] INFO | experiment | STEP 6: GENERATING RESEARCH PAPER PLOTS
+[2026-06-23 13:05:40] INFO | experiment | ============================================================
