@@ -1,0 +1,22 @@
+[2026-06-24 16:52:09] INFO | experiment | Device: cuda
+[2026-06-24 16:52:09] INFO | experiment | Cohort: 100 buildings/dataset (tag='_c100') | ashrae=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed_c100 | lead=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed_c100
+[2026-06-24 16:52:09] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
+[2026-06-24 16:52:09] INFO | experiment | ============================================================
+[2026-06-24 16:52:09] INFO | experiment | STEP 2: MULTI-TASK FEDERATED LEARNING
+[2026-06-24 16:52:09] INFO | experiment |   Mode: dual | Strategy: fedavg
+[2026-06-24 16:52:09] INFO | experiment | ============================================================
+[2026-06-24 16:53:10] INFO | experiment | Forecasting model params: 884,999
+[2026-06-24 16:53:10] INFO | experiment | Anomaly model params:     976,623
+[2026-06-24 16:53:10] INFO | experiment | Shared backbone params:   829,790
+[2026-06-24 16:53:10] INFO | experiment | Forecasting head params:  55,209
+[2026-06-24 16:53:10] INFO | experiment | Anomaly head params:      146,833
+[2026-06-24 16:53:10] INFO | experiment | Single-GPU mode on cuda (available: 2, max: 1)
+[2026-06-24 16:53:10] INFO | experiment | Backbone compatibility verified.
+[2026-06-24 16:53:10] INFO | experiment | Multi-Task Federated Training
+[2026-06-24 16:53:10] INFO | experiment |   Mode: dual | Strategy: fedavg
+[2026-06-24 16:53:10] INFO | experiment |   Forecasting clients: 85
+[2026-06-24 16:53:10] INFO | experiment |   Anomaly clients:     85
+[2026-06-24 16:53:10] INFO | experiment |   Total clients:       170
+[2026-06-24 16:53:10] INFO | experiment |   Rounds: 1, Local epochs: 5
+[2026-06-24 16:53:10] INFO | experiment |   GPUs: 1
+[2026-06-24 16:53:10] INFO | experiment | Round 1/1 | 170 clients
