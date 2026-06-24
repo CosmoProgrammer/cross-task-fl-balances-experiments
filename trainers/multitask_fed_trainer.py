@@ -637,24 +637,27 @@ class MultiTaskFederatedTrainer:
                 self._update_scaffold_global_controls(
                     fc_ids, an_ids, old_fc_controls, old_an_controls)
 
-            # ── Evaluate ──
-            fc_loss = self._eval_forecasting(forecast_test_loader)
-            an_loss = self._eval_anomaly(anomaly_test_loader)
+            # ── Evaluate (every eval_every rounds; always on the final round) ──
+            eval_every = max(1, getattr(self.config, "eval_every", 1))
+            is_last = (round_num + 1) == self.config.num_rounds
+            if (round_num + 1) % eval_every == 0 or is_last:
+                fc_loss = self._eval_forecasting(forecast_test_loader)
+                an_loss = self._eval_anomaly(anomaly_test_loader)
 
-            self.history["round"].append(round_num + 1)
-            self.history["forecast_test_loss"].append(fc_loss)
-            self.history["anomaly_test_loss"].append(an_loss)
+                self.history["round"].append(round_num + 1)
+                self.history["forecast_test_loss"].append(fc_loss)
+                self.history["anomaly_test_loss"].append(an_loss)
 
-            self.log.info("  Forecast test MSE: %.6f | Anomaly test MSE: %.6f",
-                         fc_loss, an_loss)
+                self.log.info("  Forecast test MSE: %.6f | Anomaly test MSE: %.6f",
+                             fc_loss, an_loss)
 
-            # CSV logging
-            if self.csv_logger is not None:
-                self.csv_logger.log({
-                    "round": round_num + 1,
-                    "forecast_test_mse": f"{fc_loss:.6f}",
-                    "anomaly_test_mse": f"{an_loss:.6f}",
-                })
+                # CSV logging
+                if self.csv_logger is not None:
+                    self.csv_logger.log({
+                        "round": round_num + 1,
+                        "forecast_test_mse": f"{fc_loss:.6f}",
+                        "anomaly_test_mse": f"{an_loss:.6f}",
+                    })
 
             # Free client models
             del forecast_models, anomaly_models

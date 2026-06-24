@@ -70,7 +70,14 @@ class ExperimentConfig:
     weight_decay: float = 0.01
     grad_clip: float = 1.0
     participation_rate: float = 1.0  # 100% — all 70 clients per round
-    max_federated_gpus: int = 1      # safe default: avoid threaded multi-GPU CUDA
+    # Set to 2 to run forecasting ‖ anomaly client groups on separate GPUs
+    # (the box has 2). ~up to 2x/round, but grabs BOTH GPUs -> only use when the
+    # other is free. Validate with a 1-round run before a sweep (threaded CUDA).
+    max_federated_gpus: int = 1
+    # Run the per-round test eval only every K rounds (the final round always
+    # evals). The eval is ~12% of a round; K>1 trims it. History/CSV become
+    # sparse in round number, which --visualize handles.
+    eval_every: int = 1
 
     # ── FL aggregation mode and strategy ──
     aggregation_mode: str = "dual"    # "dual", "single_task", "local_only"
