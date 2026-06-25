@@ -32,3 +32,5 @@
 [2026-06-25 10:02:33] INFO | experiment | Round 6/10 | 170 clients
 [2026-06-25 11:03:13] INFO | experiment |   Forecast test MSE: 0.191914 | Anomaly test MSE: 0.133316 | round 3640s
 [2026-06-25 11:03:14] INFO | experiment | Round 7/10 | 170 clients
+[2026-06-25 12:06:24] INFO | experiment |   Forecast test MSE: 0.191048 | Anomaly test MSE: 0.133813 | round 3791s
+[2026-06-25 12:06:25] INFO | experiment | Round 8/10 | 170 clients
