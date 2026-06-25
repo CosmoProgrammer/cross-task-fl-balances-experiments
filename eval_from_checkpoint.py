@@ -50,6 +50,11 @@ def main():
     ap.add_argument("--cohort", type=int, default=ExperimentConfig.cohort_size,
                     help="Cohort size of the checkpoints being eval'd (default 50). "
                          "Must match the run, so the right processed-data dir is read.")
+    ap.add_argument("--dump-scores", default=None,
+                    help="If set, save raw per-window anomaly (val/test) scores+labels "
+                         "to this .npz path. These arrays are the re-derivable artifact: "
+                         "all matched-operating-point analysis (P@R, threshold transfer, "
+                         "PR/ROC curves) runs off them on any machine with no GPU/data.")
     args = ap.parse_args()
 
     config = ExperimentConfig(cohort_size=args.cohort)
@@ -105,6 +110,21 @@ def main():
     for k in ["f1", "mcc", "balanced_accuracy", "fpr", "auc_roc", "auc_pr",
               "precision", "recall", "accuracy"]:
         log.info("  %s: %.4f", k.upper(), an_metrics[k])
+
+    if args.dump_scores:
+        # Raw per-window scores+labels: the artifact for matched-operating-point
+        # analysis. Same fixed 15-building test set across cohorts -> directly
+        # comparable. scp this .npz off the server and analyze on the laptop.
+        np.savez_compressed(
+            args.dump_scores,
+            val_scores=np.asarray(val_scores).flatten(),
+            val_labels=np.asarray(val_labels).flatten(),
+            test_scores=np.asarray(test_scores).flatten(),
+            test_labels=np.asarray(test_labels).flatten(),
+            val_threshold=np.float64(threshold),
+            cohort=np.int64(config.cohort_size),
+        )
+        log.info("  dumped anomaly scores -> %s", args.dump_scores)
 
     results = {
         "experiment": "eval_from_checkpoint",
