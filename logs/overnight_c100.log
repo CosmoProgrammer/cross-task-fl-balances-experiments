@@ -127,3 +127,75 @@ ModuleNotFoundError: No module named 'cycler'
 [2026-06-25 11:03:14] INFO | experiment | Round 7/10 | 170 clients
 [2026-06-25 12:06:24] INFO | experiment |   Forecast test MSE: 0.191048 | Anomaly test MSE: 0.133813 | round 3791s
 [2026-06-25 12:06:25] INFO | experiment | Round 8/10 | 170 clients
+[2026-06-25 13:06:30] INFO | experiment |   Forecast test MSE: 0.190836 | Anomaly test MSE: 0.132655 | round 3606s
+[2026-06-25 13:06:30] INFO | experiment | Round 9/10 | 170 clients
+[2026-06-25 14:10:31] INFO | experiment |   Forecast test MSE: 0.189669 | Anomaly test MSE: 0.132357 | round 3841s
+[2026-06-25 14:10:31] INFO | experiment | Round 10/10 | 170 clients
+[2026-06-25 15:09:22] INFO | experiment |   Forecast test MSE: 0.189672 | Anomaly test MSE: 0.132255 | round 3530s
+[2026-06-25 15:09:22] INFO | experiment | FL training completed in 37293.8s
+[2026-06-25 15:09:22] INFO | experiment | --- Federated Forecasting Evaluation ---
+[2026-06-25 15:09:46] INFO | experiment |   MSE: 0.189681
+[2026-06-25 15:09:46] INFO | experiment |   RMSE: 0.435523
+[2026-06-25 15:09:46] INFO | experiment |   MAE: 0.184483
+[2026-06-25 15:09:46] INFO | experiment |   MAPE: 28.51%
+[2026-06-25 15:09:46] INFO | experiment |   SMAPE: 11.824190
+[2026-06-25 15:09:46] INFO | experiment |   WAPE: 4.594724
+[2026-06-25 15:09:46] INFO | experiment |   NRMSE: 0.108471
+[2026-06-25 15:09:46] INFO | experiment |   MASE: 2.315497
+[2026-06-25 15:09:46] INFO | experiment |   RSE: 0.236746
+[2026-06-25 15:09:46] INFO | experiment |   CORR: 0.971576
+[2026-06-25 15:09:46] INFO | experiment |   R2: 0.943951
+[2026-06-25 15:09:46] INFO | experiment | --- Federated Anomaly Detection Evaluation ---
+[2026-06-25 15:10:24] INFO | experiment |   Threshold (from val): 0.008542
+[2026-06-25 15:10:56] INFO | experiment |   F1: 0.4963
+[2026-06-25 15:10:56] INFO | experiment |   AUC_ROC: 0.8158
+[2026-06-25 15:10:56] INFO | experiment |   AUC_PR: 0.6518
+[2026-06-25 15:10:56] INFO | experiment |   PRECISION: 0.3576
+[2026-06-25 15:10:56] INFO | experiment |   RECALL: 0.8107
+[2026-06-25 15:10:56] INFO | experiment | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/federated_single_task_fedavg_c100_results.json
+[2026-06-25 15:10:56] INFO | experiment | Models saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/checkpoints
+[2026-06-25 15:11:04] INFO | experiment | ============================================================
+[2026-06-25 15:11:04] INFO | experiment | STEP 6: GENERATING RESEARCH PAPER PLOTS
+[2026-06-25 15:11:04] INFO | experiment | ============================================================
+Traceback (most recent call last):
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 608, in <module>
+    main()
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 602, in main
+    run_visualization(config, log)
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 411, in run_visualization
+    from visualization.plots import generate_all_plots
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/visualization/plots.py", line 5, in <module>
+    import matplotlib
+  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/matplotlib/__init__.py", line 159, in <module>
+    from . import _api, _version, cbook, _docstring, rcsetup
+  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/matplotlib/rcsetup.py", line 33, in <module>
+    from cycler import Cycler, cycler as ccycler
+ModuleNotFoundError: No module named 'cycler'
+=== [2026-06-25 15:11:05] END:   single_task/fedavg  exit=1  (624m)
+=== [2026-06-25 15:11:05] START: local_only/fedavg
+[2026-06-25 15:11:10] INFO | experiment | Device: cuda
+[2026-06-25 15:11:10] INFO | experiment | Cohort: 100 buildings/dataset (tag='_c100') | ashrae=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed_c100 | lead=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed_c100
+[2026-06-25 15:11:10] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
+[2026-06-25 15:11:10] INFO | experiment | ============================================================
+[2026-06-25 15:11:10] INFO | experiment | STEP 2: MULTI-TASK FEDERATED LEARNING
+[2026-06-25 15:11:10] INFO | experiment |   Mode: local_only | Strategy: fedavg
+[2026-06-25 15:11:10] INFO | experiment | ============================================================
+[FL-ASHRAE] 85 clients, 15 test buildings
+[FL-ASHRAE] 85 active clients, 85916 test windows
+[FL-LEAD] 85 clients, 15 test buildings
+[FL-LEAD] 85 active clients, 138122 val, 129708 test windows
+[2026-06-25 15:12:12] INFO | experiment | Forecasting model params: 884,999
+[2026-06-25 15:12:12] INFO | experiment | Anomaly model params:     976,623
+[2026-06-25 15:12:12] INFO | experiment | Shared backbone params:   829,790
+[2026-06-25 15:12:12] INFO | experiment | Forecasting head params:  55,209
+[2026-06-25 15:12:12] INFO | experiment | Anomaly head params:      146,833
+[2026-06-25 15:12:12] INFO | experiment | Single-GPU mode on cuda (available: 2, max: 1)
+[2026-06-25 15:12:12] INFO | experiment | Backbone compatibility verified.
+[2026-06-25 15:12:12] INFO | experiment | Multi-Task Federated Training
+[2026-06-25 15:12:12] INFO | experiment |   Mode: local_only | Strategy: fedavg
+[2026-06-25 15:12:12] INFO | experiment |   Forecasting clients: 85
+[2026-06-25 15:12:12] INFO | experiment |   Anomaly clients:     85
+[2026-06-25 15:12:12] INFO | experiment |   Total clients:       170
+[2026-06-25 15:12:12] INFO | experiment |   Rounds: 10, Local epochs: 5
+[2026-06-25 15:12:12] INFO | experiment |   GPUs: 1
+[2026-06-25 15:12:12] INFO | experiment | Round 1/10 | 170 clients
