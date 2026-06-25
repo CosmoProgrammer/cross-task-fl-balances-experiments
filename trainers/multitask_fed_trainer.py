@@ -463,6 +463,7 @@ class MultiTaskFederatedTrainer:
         Handles all FL strategies (fedavg, fedprox, scaffold) and supports
         local_only mode via persistent_clients dict.
         """
+        group_start = time.time()
         models, weights = [], []
 
         # FedProx: snapshot global params once per group
@@ -542,6 +543,12 @@ class MultiTaskFederatedTrainer:
                 persistent_clients[cid] = {
                     k: v.cpu().clone() for k, v in trained.state_dict().items()
                 }
+
+        # Per-group wall-time on `target_device` — in the 2-GPU path the two
+        # groups run concurrently, so comparing these reveals the task imbalance
+        # (and thus whether splitting by task across GPUs actually helps).
+        self.log.info("  [%s] %d clients trained on %s in %.0fs",
+                      task, len(models), target_device, time.time() - group_start)
 
         return models, weights
 
