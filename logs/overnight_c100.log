@@ -199,3 +199,4 @@ ModuleNotFoundError: No module named 'cycler'
 [2026-06-25 15:12:12] INFO | experiment |   Rounds: 10, Local epochs: 5
 [2026-06-25 15:12:12] INFO | experiment |   GPUs: 1
 [2026-06-25 15:12:12] INFO | experiment | Round 1/10 | 170 clients
+[2026-06-25 15:43:06] INFO | experiment |   [forecasting] 85 clients trained on cuda in 1854s

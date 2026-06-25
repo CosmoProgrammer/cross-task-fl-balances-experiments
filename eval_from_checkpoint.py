@@ -36,7 +36,7 @@ from configs.config import ExperimentConfig
 def _load(model, path, device):
     if not os.path.exists(path):
         raise FileNotFoundError(f"checkpoint not found: {path}")
-    state = torch.load(path, map_location=device)
+    state = torch.load(path, map_location=device, weights_only=False)
     model.load_state_dict(state)  # strict: dims must match config defaults
     return model
 
