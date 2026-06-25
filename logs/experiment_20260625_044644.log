@@ -1,0 +1,34 @@
+[2026-06-25 04:46:44] INFO | experiment | Device: cuda
+[2026-06-25 04:46:44] INFO | experiment | Cohort: 100 buildings/dataset (tag='_c100') | ashrae=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed_c100 | lead=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed_c100
+[2026-06-25 04:46:44] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
+[2026-06-25 04:46:44] INFO | experiment | ============================================================
+[2026-06-25 04:46:44] INFO | experiment | STEP 2: MULTI-TASK FEDERATED LEARNING
+[2026-06-25 04:46:44] INFO | experiment |   Mode: single_task | Strategy: fedavg
+[2026-06-25 04:46:44] INFO | experiment | ============================================================
+[2026-06-25 04:47:48] INFO | experiment | Forecasting model params: 884,999
+[2026-06-25 04:47:48] INFO | experiment | Anomaly model params:     976,623
+[2026-06-25 04:47:48] INFO | experiment | Shared backbone params:   829,790
+[2026-06-25 04:47:48] INFO | experiment | Forecasting head params:  55,209
+[2026-06-25 04:47:48] INFO | experiment | Anomaly head params:      146,833
+[2026-06-25 04:47:48] INFO | experiment | Single-GPU mode on cuda (available: 2, max: 1)
+[2026-06-25 04:47:48] INFO | experiment | Backbone compatibility verified.
+[2026-06-25 04:47:48] INFO | experiment | Multi-Task Federated Training
+[2026-06-25 04:47:48] INFO | experiment |   Mode: single_task | Strategy: fedavg
+[2026-06-25 04:47:48] INFO | experiment |   Forecasting clients: 85
+[2026-06-25 04:47:48] INFO | experiment |   Anomaly clients:     85
+[2026-06-25 04:47:48] INFO | experiment |   Total clients:       170
+[2026-06-25 04:47:48] INFO | experiment |   Rounds: 10, Local epochs: 5
+[2026-06-25 04:47:48] INFO | experiment |   GPUs: 1
+[2026-06-25 04:47:48] INFO | experiment | Round 1/10 | 170 clients
+[2026-06-25 05:49:27] INFO | experiment |   Forecast test MSE: 0.226122 | Anomaly test MSE: 0.201867 | round 3699s
+[2026-06-25 05:49:28] INFO | experiment | Round 2/10 | 170 clients
+[2026-06-25 06:49:45] INFO | experiment |   Forecast test MSE: 0.204881 | Anomaly test MSE: 0.169613 | round 3618s
+[2026-06-25 06:49:46] INFO | experiment | Round 3/10 | 170 clients
+[2026-06-25 07:54:04] INFO | experiment |   Forecast test MSE: 0.198215 | Anomaly test MSE: 0.140644 | round 3858s
+[2026-06-25 07:54:04] INFO | experiment | Round 4/10 | 170 clients
+[2026-06-25 08:58:05] INFO | experiment |   Forecast test MSE: 0.195318 | Anomaly test MSE: 0.133834 | round 3841s
+[2026-06-25 08:58:05] INFO | experiment | Round 5/10 | 170 clients
+[2026-06-25 10:02:33] INFO | experiment |   Forecast test MSE: 0.192704 | Anomaly test MSE: 0.133015 | round 3867s
+[2026-06-25 10:02:33] INFO | experiment | Round 6/10 | 170 clients
+[2026-06-25 11:03:13] INFO | experiment |   Forecast test MSE: 0.191914 | Anomaly test MSE: 0.133316 | round 3640s
+[2026-06-25 11:03:14] INFO | experiment | Round 7/10 | 170 clients
