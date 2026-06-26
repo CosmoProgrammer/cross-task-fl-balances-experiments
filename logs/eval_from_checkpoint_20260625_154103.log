@@ -1,0 +1,29 @@
+[2026-06-25 15:41:03] INFO | eval_from_checkpoint | Device: cuda | Mamba fused kernels: ON
+[2026-06-25 15:42:10] INFO | eval_from_checkpoint | Single-GPU mode on cuda (available: 2, max: 1)
+[2026-06-25 15:42:10] INFO | eval_from_checkpoint | Backbone compatibility verified.
+[2026-06-25 15:42:10] INFO | eval_from_checkpoint | Loaded fc=checkpoints/fed_single_task_fedavg_c100_forecasting_model.pt an=checkpoints/fed_single_task_fedavg_c100_anomaly_model.pt
+[2026-06-25 15:42:10] INFO | eval_from_checkpoint | --- Forecasting eval ---
+[2026-06-25 15:42:35] INFO | eval_from_checkpoint |   MSE: 0.189681
+[2026-06-25 15:42:35] INFO | eval_from_checkpoint |   RMSE: 0.435523
+[2026-06-25 15:42:35] INFO | eval_from_checkpoint |   MAE: 0.184483
+[2026-06-25 15:42:35] INFO | eval_from_checkpoint |   MAPE: 28.510386
+[2026-06-25 15:42:35] INFO | eval_from_checkpoint |   SMAPE: 11.824190
+[2026-06-25 15:42:35] INFO | eval_from_checkpoint |   WAPE: 4.594724
+[2026-06-25 15:42:35] INFO | eval_from_checkpoint |   NRMSE: 0.108471
+[2026-06-25 15:42:35] INFO | eval_from_checkpoint |   MASE: 2.315497
+[2026-06-25 15:42:35] INFO | eval_from_checkpoint |   RSE: 0.236746
+[2026-06-25 15:42:35] INFO | eval_from_checkpoint |   CORR: 0.971576
+[2026-06-25 15:42:35] INFO | eval_from_checkpoint |   R2: 0.943951
+[2026-06-25 15:42:35] INFO | eval_from_checkpoint |   per-horizon MAE h1/h12/h24: 0.0781 / 0.2094 / 0.1866
+[2026-06-25 15:42:35] INFO | eval_from_checkpoint | --- Anomaly eval ---
+[2026-06-25 15:43:47] INFO | eval_from_checkpoint |   F1: 0.4963
+[2026-06-25 15:43:47] INFO | eval_from_checkpoint |   MCC: 0.3498
+[2026-06-25 15:43:47] INFO | eval_from_checkpoint |   BALANCED_ACCURACY: 0.7155
+[2026-06-25 15:43:47] INFO | eval_from_checkpoint |   FPR: 0.3797
+[2026-06-25 15:43:47] INFO | eval_from_checkpoint |   AUC_ROC: 0.8158
+[2026-06-25 15:43:47] INFO | eval_from_checkpoint |   AUC_PR: 0.6518
+[2026-06-25 15:43:47] INFO | eval_from_checkpoint |   PRECISION: 0.3576
+[2026-06-25 15:43:47] INFO | eval_from_checkpoint |   RECALL: 0.8107
+[2026-06-25 15:43:47] INFO | eval_from_checkpoint |   ACCURACY: 0.6597
+[2026-06-25 15:43:47] INFO | eval_from_checkpoint |   dumped anomaly scores -> anomaly_scores_c100_single_task.npz
+[2026-06-25 15:43:47] INFO | eval_from_checkpoint | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/reeval_reeval_results.json

@@ -34,3 +34,33 @@
 [2026-06-25 11:03:14] INFO | experiment | Round 7/10 | 170 clients
 [2026-06-25 12:06:24] INFO | experiment |   Forecast test MSE: 0.191048 | Anomaly test MSE: 0.133813 | round 3791s
 [2026-06-25 12:06:25] INFO | experiment | Round 8/10 | 170 clients
+[2026-06-25 13:06:30] INFO | experiment |   Forecast test MSE: 0.190836 | Anomaly test MSE: 0.132655 | round 3606s
+[2026-06-25 13:06:30] INFO | experiment | Round 9/10 | 170 clients
+[2026-06-25 14:10:31] INFO | experiment |   Forecast test MSE: 0.189669 | Anomaly test MSE: 0.132357 | round 3841s
+[2026-06-25 14:10:31] INFO | experiment | Round 10/10 | 170 clients
+[2026-06-25 15:09:22] INFO | experiment |   Forecast test MSE: 0.189672 | Anomaly test MSE: 0.132255 | round 3530s
+[2026-06-25 15:09:22] INFO | experiment | FL training completed in 37293.8s
+[2026-06-25 15:09:22] INFO | experiment | --- Federated Forecasting Evaluation ---
+[2026-06-25 15:09:46] INFO | experiment |   MSE: 0.189681
+[2026-06-25 15:09:46] INFO | experiment |   RMSE: 0.435523
+[2026-06-25 15:09:46] INFO | experiment |   MAE: 0.184483
+[2026-06-25 15:09:46] INFO | experiment |   MAPE: 28.51%
+[2026-06-25 15:09:46] INFO | experiment |   SMAPE: 11.824190
+[2026-06-25 15:09:46] INFO | experiment |   WAPE: 4.594724
+[2026-06-25 15:09:46] INFO | experiment |   NRMSE: 0.108471
+[2026-06-25 15:09:46] INFO | experiment |   MASE: 2.315497
+[2026-06-25 15:09:46] INFO | experiment |   RSE: 0.236746
+[2026-06-25 15:09:46] INFO | experiment |   CORR: 0.971576
+[2026-06-25 15:09:46] INFO | experiment |   R2: 0.943951
+[2026-06-25 15:09:46] INFO | experiment | --- Federated Anomaly Detection Evaluation ---
+[2026-06-25 15:10:24] INFO | experiment |   Threshold (from val): 0.008542
+[2026-06-25 15:10:56] INFO | experiment |   F1: 0.4963
+[2026-06-25 15:10:56] INFO | experiment |   AUC_ROC: 0.8158
+[2026-06-25 15:10:56] INFO | experiment |   AUC_PR: 0.6518
+[2026-06-25 15:10:56] INFO | experiment |   PRECISION: 0.3576
+[2026-06-25 15:10:56] INFO | experiment |   RECALL: 0.8107
+[2026-06-25 15:10:56] INFO | experiment | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/federated_single_task_fedavg_c100_results.json
+[2026-06-25 15:10:56] INFO | experiment | Models saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/checkpoints
+[2026-06-25 15:11:04] INFO | experiment | ============================================================
+[2026-06-25 15:11:04] INFO | experiment | STEP 6: GENERATING RESEARCH PAPER PLOTS
+[2026-06-25 15:11:04] INFO | experiment | ============================================================

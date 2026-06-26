@@ -200,3 +200,136 @@ ModuleNotFoundError: No module named 'cycler'
 [2026-06-25 15:12:12] INFO | experiment |   GPUs: 1
 [2026-06-25 15:12:12] INFO | experiment | Round 1/10 | 170 clients
 [2026-06-25 15:43:06] INFO | experiment |   [forecasting] 85 clients trained on cuda in 1854s
+[2026-06-25 16:15:23] INFO | experiment |   [anomaly] 85 clients trained on cuda in 1937s
+[2026-06-25 16:16:26] INFO | experiment |   Forecast test MSE: 0.226137 | Anomaly test MSE: 0.202883 | round 3855s
+[2026-06-25 16:16:27] INFO | experiment | Round 2/10 | 170 clients
+[2026-06-25 16:47:29] INFO | experiment |   [forecasting] 85 clients trained on cuda in 1862s
+[2026-06-25 17:20:16] INFO | experiment |   [anomaly] 85 clients trained on cuda in 1967s
+[2026-06-25 17:21:09] INFO | experiment |   Forecast test MSE: 0.231520 | Anomaly test MSE: 0.180280 | round 3882s
+[2026-06-25 17:21:09] INFO | experiment | Round 3/10 | 170 clients
+[2026-06-25 17:50:43] INFO | experiment |   [forecasting] 85 clients trained on cuda in 1774s
+[2026-06-25 18:28:16] INFO | experiment |   [anomaly] 85 clients trained on cuda in 2253s
+[2026-06-25 18:29:09] INFO | experiment |   Forecast test MSE: 0.235182 | Anomaly test MSE: 0.169410 | round 4080s
+[2026-06-25 18:29:09] INFO | experiment | Round 4/10 | 170 clients
+[2026-06-25 18:55:06] INFO | experiment |   [forecasting] 85 clients trained on cuda in 1557s
+[2026-06-25 19:30:58] INFO | experiment |   [anomaly] 85 clients trained on cuda in 2152s
+[2026-06-25 19:31:49] INFO | experiment |   Forecast test MSE: 0.236497 | Anomaly test MSE: 0.162986 | round 3759s
+[2026-06-25 19:31:49] INFO | experiment | Round 5/10 | 170 clients
+[2026-06-25 19:58:08] INFO | experiment |   [forecasting] 85 clients trained on cuda in 1579s
+[2026-06-25 20:33:19] INFO | experiment |   [anomaly] 85 clients trained on cuda in 2111s
+[2026-06-25 20:34:23] INFO | experiment |   Forecast test MSE: 0.238094 | Anomaly test MSE: 0.163615 | round 3754s
+[2026-06-25 20:34:23] INFO | experiment | Round 6/10 | 170 clients
+[2026-06-25 21:03:41] INFO | experiment |   [forecasting] 85 clients trained on cuda in 1758s
+[2026-06-25 21:33:05] INFO | experiment |   [anomaly] 85 clients trained on cuda in 1764s
+[2026-06-25 21:33:56] INFO | experiment |   Forecast test MSE: 0.240402 | Anomaly test MSE: 0.168514 | round 3573s
+[2026-06-25 21:33:56] INFO | experiment | Round 7/10 | 170 clients
+[2026-06-25 22:01:53] INFO | experiment |   [forecasting] 85 clients trained on cuda in 1677s
+[2026-06-25 22:35:56] INFO | experiment |   [anomaly] 85 clients trained on cuda in 2043s
+[2026-06-25 22:36:48] INFO | experiment |   Forecast test MSE: 0.240661 | Anomaly test MSE: 0.174981 | round 3772s
+[2026-06-25 22:36:49] INFO | experiment | Round 8/10 | 170 clients
+[2026-06-25 23:10:21] INFO | experiment |   [forecasting] 85 clients trained on cuda in 2012s
+[2026-06-25 23:40:34] INFO | experiment |   [anomaly] 85 clients trained on cuda in 1812s
+[2026-06-25 23:41:32] INFO | experiment |   Forecast test MSE: 0.241323 | Anomaly test MSE: 0.182893 | round 3883s
+[2026-06-25 23:41:32] INFO | experiment | Round 9/10 | 170 clients
+[2026-06-26 00:09:51] INFO | experiment |   [forecasting] 85 clients trained on cuda in 1699s
+[2026-06-26 00:47:03] INFO | experiment |   [anomaly] 85 clients trained on cuda in 2232s
+[2026-06-26 00:48:10] INFO | experiment |   Forecast test MSE: 0.242009 | Anomaly test MSE: 0.190622 | round 3998s
+[2026-06-26 00:48:10] INFO | experiment | Round 10/10 | 170 clients
+[2026-06-26 01:17:00] INFO | experiment |   [forecasting] 85 clients trained on cuda in 1730s
+[2026-06-26 01:45:40] INFO | experiment |   [anomaly] 85 clients trained on cuda in 1720s
+[2026-06-26 01:46:35] INFO | experiment |   Forecast test MSE: 0.242994 | Anomaly test MSE: 0.199600 | round 3505s
+[2026-06-26 01:46:36] INFO | experiment | FL training completed in 38064.0s
+[2026-06-26 01:46:36] INFO | experiment | --- Federated Forecasting Evaluation ---
+[2026-06-26 01:46:58] INFO | experiment |   MSE: 0.243004
+[2026-06-26 01:46:58] INFO | experiment |   RMSE: 0.492955
+[2026-06-26 01:46:58] INFO | experiment |   MAE: 0.246066
+[2026-06-26 01:46:58] INFO | experiment |   MAPE: 26.96%
+[2026-06-26 01:46:58] INFO | experiment |   SMAPE: 18.067923
+[2026-06-26 01:46:58] INFO | experiment |   WAPE: 6.128510
+[2026-06-26 01:46:58] INFO | experiment |   NRMSE: 0.122775
+[2026-06-26 01:46:58] INFO | experiment |   MASE: 3.088444
+[2026-06-26 01:46:58] INFO | experiment |   RSE: 0.267965
+[2026-06-26 01:46:58] INFO | experiment |   CORR: 0.963807
+[2026-06-26 01:46:58] INFO | experiment |   R2: 0.928195
+[2026-06-26 01:46:58] INFO | experiment | --- Federated Anomaly Detection Evaluation ---
+[2026-06-26 01:47:32] INFO | experiment |   Threshold (from val): 0.030375
+[2026-06-26 01:48:05] INFO | experiment |   F1: 0.4120
+[2026-06-26 01:48:05] INFO | experiment |   AUC_ROC: 0.7537
+[2026-06-26 01:48:05] INFO | experiment |   AUC_PR: 0.5715
+[2026-06-26 01:48:05] INFO | experiment |   PRECISION: 0.2662
+[2026-06-26 01:48:05] INFO | experiment |   RECALL: 0.9111
+[2026-06-26 01:48:05] INFO | experiment | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/federated_local_only_fedavg_c100_results.json
+[2026-06-26 01:48:05] INFO | experiment | Models saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/checkpoints
+[2026-06-26 01:48:15] INFO | experiment | ============================================================
+[2026-06-26 01:48:15] INFO | experiment | STEP 6: GENERATING RESEARCH PAPER PLOTS
+[2026-06-26 01:48:15] INFO | experiment | ============================================================
+Traceback (most recent call last):
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 608, in <module>
+    main()
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 602, in main
+    run_visualization(config, log)
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 411, in run_visualization
+    from visualization.plots import generate_all_plots
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/visualization/plots.py", line 5, in <module>
+    import matplotlib
+  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/matplotlib/__init__.py", line 159, in <module>
+    from . import _api, _version, cbook, _docstring, rcsetup
+  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/matplotlib/rcsetup.py", line 33, in <module>
+    from cycler import Cycler, cycler as ccycler
+ModuleNotFoundError: No module named 'cycler'
+=== [2026-06-26 01:48:17] END:   local_only/fedavg  exit=1  (637m)
+=== [2026-06-26 01:48:17] START: centralized
+[2026-06-26 01:48:21] INFO | experiment | Device: cuda
+[2026-06-26 01:48:21] INFO | experiment | Cohort: 100 buildings/dataset (tag='_c100') | ashrae=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed_c100 | lead=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed_c100
+[2026-06-26 01:48:21] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
+[2026-06-26 01:48:21] INFO | experiment | ============================================================
+[2026-06-26 01:48:21] INFO | experiment | STEP 3: CENTRALIZED BASELINES
+[2026-06-26 01:48:21] INFO | experiment | ============================================================
+[2026-06-26 01:48:21] INFO | experiment | --- Centralized Forecasting ---
+[ASHRAE-Centralized] 335785 train, 97632 val, 85916 test windows (85 train + 15 test buildings)
+[2026-06-26 01:53:55] INFO | experiment | Epoch 1/100 | train=0.150154 val=0.075890
+[2026-06-26 02:50:45] INFO | experiment | Epoch 11/100 | train=0.112335 val=0.074444
+[2026-06-26 03:37:55] INFO | experiment | Epoch 21/100 | train=0.103313 val=0.071079
+[2026-06-26 03:53:19] INFO | experiment | Early stopping at epoch 24
+[2026-06-26 03:53:41] INFO | experiment |   MSE: 0.173047
+[2026-06-26 03:53:41] INFO | experiment |   RMSE: 0.415989
+[2026-06-26 03:53:41] INFO | experiment |   MAE: 0.149429
+[2026-06-26 03:53:41] INFO | experiment |   MAPE: 30.32%
+[2026-06-26 03:53:41] INFO | experiment |   SMAPE: 11.070481
+[2026-06-26 03:53:41] INFO | experiment |   WAPE: 3.721676
+[2026-06-26 03:53:41] INFO | experiment |   NRMSE: 0.103606
+[2026-06-26 03:53:41] INFO | experiment |   MASE: 1.875528
+[2026-06-26 03:53:41] INFO | experiment |   RSE: 0.226127
+[2026-06-26 03:53:41] INFO | experiment |   CORR: 0.974153
+[2026-06-26 03:53:41] INFO | experiment |   R2: 0.948866
+[2026-06-26 03:53:41] INFO | experiment | --- Centralized Anomaly Detection ---
+[LEAD-Centralized] 393186 train (clean only), 138122 val, 129708 test windows (85 train + 15 test buildings)
+[2026-06-26 04:00:14] INFO | experiment | Epoch 1/100 | train=0.498214 val=0.058632
+[2026-06-26 05:10:26] INFO | experiment | Epoch 11/100 | train=0.424749 val=0.049902
+[2026-06-26 05:54:14] INFO | experiment | Early stopping at epoch 18
+[2026-06-26 05:54:51] INFO | experiment |   Threshold (from val): 0.006806
+[2026-06-26 05:55:24] INFO | experiment |   F1: 0.5616
+[2026-06-26 05:55:24] INFO | experiment |   AUC_ROC: 0.8387
+[2026-06-26 05:55:24] INFO | experiment |   AUC_PR: 0.6797
+[2026-06-26 05:55:24] INFO | experiment |   PRECISION: 0.4541
+[2026-06-26 05:55:24] INFO | experiment |   RECALL: 0.7359
+[2026-06-26 05:55:24] INFO | experiment | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/centralized_c100_results.json
+[2026-06-26 05:55:24] INFO | experiment | ============================================================
+[2026-06-26 05:55:24] INFO | experiment | STEP 6: GENERATING RESEARCH PAPER PLOTS
+[2026-06-26 05:55:24] INFO | experiment | ============================================================
+Traceback (most recent call last):
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 608, in <module>
+    main()
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 602, in main
+    run_visualization(config, log)
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 411, in run_visualization
+    from visualization.plots import generate_all_plots
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/visualization/plots.py", line 5, in <module>
+    import matplotlib
+  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/matplotlib/__init__.py", line 159, in <module>
+    from . import _api, _version, cbook, _docstring, rcsetup
+  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/matplotlib/rcsetup.py", line 33, in <module>
+    from cycler import Cycler, cycler as ccycler
+ModuleNotFoundError: No module named 'cycler'
+=== [2026-06-26 05:55:25] END:   centralized  exit=1  (247m)
+=== ALL CONDITIONS ATTEMPTED: 2026-06-26 05:55:25 ===

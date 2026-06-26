@@ -1,0 +1,36 @@
+[2026-06-26 01:48:21] INFO | experiment | Device: cuda
+[2026-06-26 01:48:21] INFO | experiment | Cohort: 100 buildings/dataset (tag='_c100') | ashrae=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed_c100 | lead=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed_c100
+[2026-06-26 01:48:21] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
+[2026-06-26 01:48:21] INFO | experiment | ============================================================
+[2026-06-26 01:48:21] INFO | experiment | STEP 3: CENTRALIZED BASELINES
+[2026-06-26 01:48:21] INFO | experiment | ============================================================
+[2026-06-26 01:48:21] INFO | experiment | --- Centralized Forecasting ---
+[2026-06-26 01:53:55] INFO | experiment | Epoch 1/100 | train=0.150154 val=0.075890
+[2026-06-26 02:50:45] INFO | experiment | Epoch 11/100 | train=0.112335 val=0.074444
+[2026-06-26 03:37:55] INFO | experiment | Epoch 21/100 | train=0.103313 val=0.071079
+[2026-06-26 03:53:19] INFO | experiment | Early stopping at epoch 24
+[2026-06-26 03:53:41] INFO | experiment |   MSE: 0.173047
+[2026-06-26 03:53:41] INFO | experiment |   RMSE: 0.415989
+[2026-06-26 03:53:41] INFO | experiment |   MAE: 0.149429
+[2026-06-26 03:53:41] INFO | experiment |   MAPE: 30.32%
+[2026-06-26 03:53:41] INFO | experiment |   SMAPE: 11.070481
+[2026-06-26 03:53:41] INFO | experiment |   WAPE: 3.721676
+[2026-06-26 03:53:41] INFO | experiment |   NRMSE: 0.103606
+[2026-06-26 03:53:41] INFO | experiment |   MASE: 1.875528
+[2026-06-26 03:53:41] INFO | experiment |   RSE: 0.226127
+[2026-06-26 03:53:41] INFO | experiment |   CORR: 0.974153
+[2026-06-26 03:53:41] INFO | experiment |   R2: 0.948866
+[2026-06-26 03:53:41] INFO | experiment | --- Centralized Anomaly Detection ---
+[2026-06-26 04:00:14] INFO | experiment | Epoch 1/100 | train=0.498214 val=0.058632
+[2026-06-26 05:10:26] INFO | experiment | Epoch 11/100 | train=0.424749 val=0.049902
+[2026-06-26 05:54:14] INFO | experiment | Early stopping at epoch 18
+[2026-06-26 05:54:51] INFO | experiment |   Threshold (from val): 0.006806
+[2026-06-26 05:55:24] INFO | experiment |   F1: 0.5616
+[2026-06-26 05:55:24] INFO | experiment |   AUC_ROC: 0.8387
+[2026-06-26 05:55:24] INFO | experiment |   AUC_PR: 0.6797
+[2026-06-26 05:55:24] INFO | experiment |   PRECISION: 0.4541
+[2026-06-26 05:55:24] INFO | experiment |   RECALL: 0.7359
+[2026-06-26 05:55:24] INFO | experiment | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/centralized_c100_results.json
+[2026-06-26 05:55:24] INFO | experiment | ============================================================
+[2026-06-26 05:55:24] INFO | experiment | STEP 6: GENERATING RESEARCH PAPER PLOTS
+[2026-06-26 05:55:24] INFO | experiment | ============================================================
