@@ -1,0 +1,7 @@
+[2026-06-27 17:38:50] INFO | experiment | Device: cuda
+[2026-06-27 17:38:50] INFO | experiment | Cohort: 50 buildings/dataset (tag='_s999') | ashrae=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed | lead=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed
+[2026-06-27 17:38:50] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
+[2026-06-27 17:38:50] INFO | experiment | ============================================================
+[2026-06-27 17:38:50] INFO | experiment | STEP 2: MULTI-TASK FEDERATED LEARNING
+[2026-06-27 17:38:50] INFO | experiment |   Mode: dual | Strategy: fedavg
+[2026-06-27 17:38:50] INFO | experiment | ============================================================

@@ -1,0 +1,26 @@
+[ASHRAE] cohort_size=200 -> /home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed_c200
+[ASHRAE] Loading raw CSV ...
+  Raw rows: 20,216,100
+  After meter==0 filter: 12,060,910
+  After May-2016 cutoff: 8,154,772
+  Dropped 5 buildings with >75% zeros
+  Dropped 62 sparse buildings (<5292 hours)
+  Available buildings after cleaning: 1345
+  Selected 200 buildings
+  Building split: 185 train, 15 test
+  Saved /home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed_c200/ashrae_clean.csv (1,170,649 rows)
+  Saved /home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed_c200/split_metadata.json
+
+[LEAD] cohort_size=200 -> /home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed_c200
+[LEAD] Loading raw CSV ...
+  Raw rows: 1,749,494
+  Available buildings: 200
+  Anomaly rate: 0.0213
+  Selected 200 buildings
+  Building split: 185 train, 15 test
+  Saved /home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed_c200/lead_clean.csv (1,749,494 rows)
+  Saved /home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed_c200/split_metadata.json
+
+[DONE] Preprocessing complete.
+  ASHRAE: 185 train / 15 test buildings (forecasting)
+  LEAD:   185 train / 15 test buildings (anomaly)

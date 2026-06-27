@@ -1,0 +1,69 @@
+Traceback (most recent call last):
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 625, in <module>
+    main()
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 599, in main
+    fed_results = run_federated(config, device, log)
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 183, in run_federated
+    history = trainer.train(
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/trainers/multitask_fed_trainer.py", line 639, in train
+    self._train_all_clients_on_device(
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/trainers/multitask_fed_trainer.py", line 511, in _train_all_clients_on_device
+    trained, loss = train_fn(
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/trainers/multitask_fed_trainer.py", line 174, in _train_forecasting_client_on
+    nn.utils.clip_grad_norm_(client_model.parameters(),
+  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/torch/nn/utils/clip_grad.py", line 43, in _no_grad_wrapper
+    return func(*args, **kwargs)
+  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/torch/nn/utils/clip_grad.py", line 224, in clip_grad_norm_
+    parameters = list(parameters)
+  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/torch/nn/modules/module.py", line 2678, in parameters
+    for _name, param in self.named_parameters(recurse=recurse):
+  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/torch/nn/modules/module.py", line 2711, in named_parameters
+    yield from gen
+  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/torch/nn/modules/module.py", line 2652, in _named_members
+    memo.add(v)
+  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/torch/_tensor.py", line 1188, in __hash__
+    return id(self)
+TypeError: 'Parameter' object is not callable
+ERROR conda.cli.main_run:execute(148): `conda run python main.py --federated --mode single_task --strategy fedavg --cohort 50 --seed 43 --eval-every 5` failed. (See above for error)
+[2026-06-27 17:40:21] INFO | experiment | Device: cuda
+[2026-06-27 17:40:21] INFO | experiment | Cohort: 50 buildings/dataset (tag='_s43') | ashrae=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed | lead=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed
+[2026-06-27 17:40:21] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
+[2026-06-27 17:40:21] INFO | experiment | ============================================================
+[2026-06-27 17:40:21] INFO | experiment | STEP 2: MULTI-TASK FEDERATED LEARNING
+[2026-06-27 17:40:21] INFO | experiment |   Mode: single_task | Strategy: fedavg
+[2026-06-27 17:40:21] INFO | experiment | ============================================================
+[FL-ASHRAE] 35 clients, 15 test buildings
+[FL-ASHRAE] 35 active clients, 85916 test windows
+[FL-LEAD] 35 clients, 15 test buildings
+[FL-LEAD] 35 active clients, 56934 val, 129708 test windows
+[2026-06-27 17:40:35] INFO | experiment | Forecasting model params: 884,999
+[2026-06-27 17:40:35] INFO | experiment | Anomaly model params:     976,623
+[2026-06-27 17:40:35] INFO | experiment | Shared backbone params:   829,790
+[2026-06-27 17:40:35] INFO | experiment | Forecasting head params:  55,209
+[2026-06-27 17:40:35] INFO | experiment | Anomaly head params:      146,833
+[2026-06-27 17:40:35] INFO | experiment | Single-GPU mode on cuda (available: 1, max: 1)
+[2026-06-27 17:40:35] INFO | experiment | Backbone compatibility verified.
+[2026-06-27 17:40:35] INFO | experiment | Multi-Task Federated Training
+[2026-06-27 17:40:35] INFO | experiment |   Mode: single_task | Strategy: fedavg
+[2026-06-27 17:40:35] INFO | experiment |   Forecasting clients: 35
+[2026-06-27 17:40:35] INFO | experiment |   Anomaly clients:     35
+[2026-06-27 17:40:35] INFO | experiment |   Total clients:       70
+[2026-06-27 17:40:35] INFO | experiment |   Rounds: 10, Local epochs: 5
+[2026-06-27 17:40:35] INFO | experiment |   GPUs: 1
+[2026-06-27 17:40:35] INFO | experiment | Round 1/10 | 70 clients
+[2026-06-27 17:54:11] INFO | experiment |   [forecasting] 35 clients trained on cuda in 816s
+[2026-06-27 18:10:17] INFO | experiment |   [anomaly] 35 clients trained on cuda in 965s
+[2026-06-27 18:10:17] INFO | experiment | Round 2/10 | 70 clients
+[2026-06-27 18:21:50] INFO | experiment |   [forecasting] 35 clients trained on cuda in 693s
+[2026-06-27 18:36:24] INFO | experiment |   [anomaly] 35 clients trained on cuda in 873s
+[2026-06-27 18:36:24] INFO | experiment | Round 3/10 | 70 clients
+[2026-06-27 18:47:35] INFO | experiment |   [forecasting] 35 clients trained on cuda in 671s
+[2026-06-27 19:01:15] INFO | experiment |   [anomaly] 35 clients trained on cuda in 820s
+[2026-06-27 19:01:15] INFO | experiment | Round 4/10 | 70 clients
+[2026-06-27 19:12:19] INFO | experiment |   [forecasting] 35 clients trained on cuda in 664s
+[2026-06-27 19:26:45] INFO | experiment |   [anomaly] 35 clients trained on cuda in 866s
+[2026-06-27 19:26:45] INFO | experiment | Round 5/10 | 70 clients
+[2026-06-27 19:38:26] INFO | experiment |   [forecasting] 35 clients trained on cuda in 700s
+[2026-06-27 19:53:22] INFO | experiment |   [anomaly] 35 clients trained on cuda in 897s
+[2026-06-27 19:54:35] INFO | experiment |   Forecast test MSE: 0.192427 | Anomaly test MSE: 0.126160 | round 1670s
+[2026-06-27 19:54:35] INFO | experiment | Round 6/10 | 70 clients
