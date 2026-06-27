@@ -510,6 +510,19 @@ def main():
                              "WARNING: a short run still writes the canonical tagged "
                              "result/checkpoints -> delete them before the real sweep, "
                              "or the sweep script will SKIP that condition as 'done'.")
+    parser.add_argument("--seed", type=int, default=ExperimentConfig.seed,
+                        help="Training seed (model init + batch order). The DATA "
+                             "split stays fixed at the preprocess seed, so multi-seed "
+                             "varies only training randomness (correct for error bars). "
+                             "Seeds != 42 tag all outputs `_s{seed}` so runs coexist. "
+                             "Default 42 (untagged, back-compat).")
+    parser.add_argument("--eval-every", type=int, default=None, dest="eval_every",
+                        help="Override config.eval_every: run the per-round TEST eval "
+                             "only every K rounds (the final round ALWAYS evals, so "
+                             "REPORTED metrics are unchanged -- only the per-round "
+                             "history becomes sparse). K>1 trims the per-round eval "
+                             "cost (~12%% of a round); handy for long multi-seed "
+                             "sweeps. Default = config (1).")
     args = parser.parse_args()
 
     run_all = not (args.preprocess or args.federated or args.centralized
@@ -520,8 +533,12 @@ def main():
     config = ExperimentConfig(cohort_size=args.cohort)
     config.aggregation_mode = args.mode
     config.fl_strategy = args.strategy
+    config.seed = args.seed  # plain attr: not used in __post_init__; read by
+                             # cohort_tag (filenames) + the seeding block below
     if args.rounds is not None:
         config.num_rounds = args.rounds
+    if args.eval_every is not None:
+        config.eval_every = args.eval_every
 
     # Setup logging
     os.makedirs(config.log_dir, exist_ok=True)

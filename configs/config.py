@@ -150,6 +150,10 @@ class ExperimentConfig:
 
     @property
     def cohort_tag(self):
-        """Filename suffix so cohort runs don't clobber each other and
-        --visualize can tell them apart. Empty for the 50-cohort (back-compat)."""
-        return "" if self.cohort_size == 50 else f"_c{self.cohort_size}"
+        """Filename suffix so cohort/seed runs don't clobber each other and
+        --visualize can tell them apart. Empty for the default 50-cohort, seed-42
+        run (back-compat: committed c50 anchor outputs stay valid). Larger cohorts
+        add `_c{N}`; seeds != 42 add `_s{seed}` (multi-seed studies coexist)."""
+        ctag = "" if self.cohort_size == 50 else f"_c{self.cohort_size}"
+        stag = "" if self.seed == 42 else f"_s{self.seed}"
+        return ctag + stag
