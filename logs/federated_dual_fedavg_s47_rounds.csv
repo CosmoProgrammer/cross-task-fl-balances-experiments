@@ -1,0 +1,3 @@
+round,forecast_test_mse,anomaly_test_mse,round_seconds
+5,0.213409,0.177589,1539.1
+10,0.203605,0.131974,1417.0
