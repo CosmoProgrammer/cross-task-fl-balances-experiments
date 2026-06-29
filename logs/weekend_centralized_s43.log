@@ -1,0 +1,53 @@
+Traceback (most recent call last):
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 625, in <module>
+    main()
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 619, in main
+    run_visualization(config, log)
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 411, in run_visualization
+    from visualization.plots import generate_all_plots
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/visualization/plots.py", line 5, in <module>
+    import matplotlib
+  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/matplotlib/__init__.py", line 159, in <module>
+    from . import _api, _version, cbook, _docstring, rcsetup
+  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/matplotlib/rcsetup.py", line 33, in <module>
+    from cycler import Cycler, cycler as ccycler
+ModuleNotFoundError: No module named 'cycler'
+ERROR conda.cli.main_run:execute(148): `conda run python main.py --centralized --cohort 50 --seed 43` failed. (See above for error)
+[2026-06-29 05:05:49] INFO | experiment | Device: cuda
+[2026-06-29 05:05:49] INFO | experiment | Cohort: 50 buildings/dataset (tag='_s43') | ashrae=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed | lead=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed
+[2026-06-29 05:05:49] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
+[2026-06-29 05:05:49] INFO | experiment | ============================================================
+[2026-06-29 05:05:49] INFO | experiment | STEP 3: CENTRALIZED BASELINES
+[2026-06-29 05:05:49] INFO | experiment | ============================================================
+[2026-06-29 05:05:49] INFO | experiment | --- Centralized Forecasting ---
+[ASHRAE-Centralized] 138069 train, 40145 val, 85916 test windows (35 train + 15 test buildings)
+[2026-06-29 05:07:52] INFO | experiment | Epoch 1/100 | train=0.174558 val=0.100070
+[2026-06-29 05:28:35] INFO | experiment | Epoch 11/100 | train=0.126708 val=0.102980
+[2026-06-29 05:44:39] INFO | experiment | Early stopping at epoch 18
+[2026-06-29 05:45:01] INFO | experiment |   MSE: 0.196468
+[2026-06-29 05:45:01] INFO | experiment |   RMSE: 0.443247
+[2026-06-29 05:45:01] INFO | experiment |   MAE: 0.172082
+[2026-06-29 05:45:01] INFO | experiment |   MAPE: 35.58%
+[2026-06-29 05:45:01] INFO | experiment |   SMAPE: 11.234494
+[2026-06-29 05:45:01] INFO | experiment |   WAPE: 4.285876
+[2026-06-29 05:45:01] INFO | experiment |   NRMSE: 0.110395
+[2026-06-29 05:45:01] INFO | experiment |   MASE: 2.159854
+[2026-06-29 05:45:01] INFO | experiment |   RSE: 0.240944
+[2026-06-29 05:45:01] INFO | experiment |   CORR: 0.970719
+[2026-06-29 05:45:01] INFO | experiment |   R2: 0.941946
+[2026-06-29 05:45:01] INFO | experiment | --- Centralized Anomaly Detection ---
+[LEAD-Centralized] 159530 train (clean only), 56934 val, 129708 test windows (35 train + 15 test buildings)
+[2026-06-29 05:47:38] INFO | experiment | Epoch 1/100 | train=0.596428 val=0.090092
+[2026-06-29 06:16:36] INFO | experiment | Epoch 11/100 | train=0.434982 val=0.066249
+[2026-06-29 06:45:32] INFO | experiment | Epoch 21/100 | train=0.432641 val=0.062092
+[2026-06-29 07:14:40] INFO | experiment | Early stopping at epoch 30
+[2026-06-29 07:14:58] INFO | experiment |   Threshold (from val): 0.049005
+[2026-06-29 07:15:39] INFO | experiment |   F1: 0.5433
+[2026-06-29 07:15:39] INFO | experiment |   AUC_ROC: 0.8297
+[2026-06-29 07:15:39] INFO | experiment |   AUC_PR: 0.6735
+[2026-06-29 07:15:39] INFO | experiment |   PRECISION: 0.8951
+[2026-06-29 07:15:39] INFO | experiment |   RECALL: 0.3900
+[2026-06-29 07:15:39] INFO | experiment | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/centralized_s43_results.json
+[2026-06-29 07:15:39] INFO | experiment | ============================================================
+[2026-06-29 07:15:39] INFO | experiment | STEP 6: GENERATING RESEARCH PAPER PLOTS
+[2026-06-29 07:15:39] INFO | experiment | ============================================================
