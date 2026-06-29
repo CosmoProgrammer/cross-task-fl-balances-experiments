@@ -1,0 +1,80 @@
+[2026-06-29 14:06:17] INFO | experiment | Device: cuda
+[2026-06-29 14:06:17] INFO | experiment | Cohort: 50 buildings/dataset (tag='_s46') | ashrae=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed | lead=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed
+[2026-06-29 14:06:17] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
+[2026-06-29 14:06:17] INFO | experiment | ============================================================
+[2026-06-29 14:06:17] INFO | experiment | STEP 2: MULTI-TASK FEDERATED LEARNING
+[2026-06-29 14:06:17] INFO | experiment |   Mode: local_only | Strategy: fedavg
+[2026-06-29 14:06:17] INFO | experiment | ===============================================[2026-06-29 14:08:23] INFO | experiment | Epoch 1/100 | train=0.165834 val=0.110757
+[2026-06-29 14:29:33] INFO | experiment | Epoch 11/100 | train=0.122656 val=0.090476
+[2026-06-29 14:51:17] INFO | experiment | Epoch 21/100 | train=0.109343 val=0.092086
+[2026-06-29 14:53:39] INFO | experiment | Early stopping at epoch 22
+[2026-06-29 14:54:03] INFO | experiment |   MSE: 0.189080
+[2026-06-29 14:54:03] INFO | experiment |   RMSE: 0.434833
+[2026-06-29 14:54:03] INFO | experiment |   MAE: 0.174234
+[2026-06-29 14:54:03] INFO | experiment |   MAPE: 31.56%
+[2026-06-29 14:54:03] INFO | experiment |   SMAPE: 13.613393
+[2026-06-29 14:54:03] INFO | experiment |   WAPE: 4.339477
+[2026-06-29 14:54:03] INFO | experiment |   NRMSE: 0.108299
+[2026-06-29 14:54:03] INFO | experiment |   MASE: 2.186866
+[2026-06-29 14:54:03] INFO | experiment |   RSE: 0.236371
+[2026-06-29 14:54:03] INFO | experiment |   CORR: 0.971691
+[2026-06-29 14:54:03] INFO | experiment |   R2: 0.944129
+[2026-06-29 14:54:03] INFO | experiment | --- Centralized Anomaly Detection ---
+[2026-06-29 14:56:56] INFO | experiment | Epoch 1/100 | train=0.559248 val=0.080222
+[2026-06-29 15:24:36] INFO | experiment | Epoch 11/100 | train=0.436001 val=0.067800
+[2026-06-29 15:53:54] INFO | experiment | Epoch 21/100 | train=0.432661 val=0.053553
+[2026-06-29 16:25:58] INFO | experiment | Epoch 31/100 | train=0.430794 val=0.068468
+[2026-06-29 16:42:59] INFO | experiment | Early stopping at epoch 36
+[2026-06-29 16:43:17] INFO | experiment |   Threshold (from val): 0.038074
+[2026-06-29 16:43:56] INFO | experiment |   F1: 0.5559
+[2026-06-29 16:43:56] INFO | experiment |   AUC_ROC: 0.8432
+[2026-06-29 16:43:56] INFO | experiment |   AUC_PR: 0.6863
+[2026-06-29 16:43:56] INFO | experiment |   PRECISION: 0.8961
+[2026-06-29 16:43:56] INFO | experiment |   RECALL: 0.4029
+[2026-06-29 16:43:56] INFO | experiment | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/centralized_s45_results.json
+[2026-06-29 16:43:56] INFO | experiment | ============================================================
+[2026-06-29 16:43:56] INFO | experiment | STEP 6: GENERATING RESEARCH PAPER PLOTS
+[2026-06-29 16:43:56] INFO | experiment | ============================================================
+cuda in 1065s
+[2026-06-29 16:22:56] INFO | experiment |   Forecast test MSE: 0.225347 | Anomaly test MSE: 0.157953 | round 1919s
+[2026-06-29 16:22:56] INFO | experiment | Round 6/10 | 70 clients
+[2026-06-29 16:37:46] INFO | experiment |   [forecasting] 35 clients trained on cuda in 889s
+[2026-06-29 16:54:09] INFO | experiment |   [anomaly] 35 clients trained on cuda in 984s
+[2026-06-29 16:54:10] INFO | experiment | Round 7/10 | 70 clients
+[2026-06-29 17:05:57] INFO | experiment |   [forecasting] 35 clients trained on cuda in 707s
+[2026-06-29 17:19:17] INFO | experiment |   [anomaly] 35 clients trained on cuda in 800s
+[2026-06-29 17:19:17] INFO | experiment | Round 8/10 | 70 clients
+[2026-06-29 17:30:17] INFO | experiment |   [forecasting] 35 clients trained on cuda in 660s
+[2026-06-29 17:44:16] INFO | experiment |   [anomaly] 35 clients trained on cuda in 839s
+[2026-06-29 17:44:17] INFO | experiment | Round 9/10 | 70 clients
+[2026-06-29 17:56:22] INFO | experiment |   [forecasting] 35 clients trained on cuda in 726s
+[2026-06-29 18:10:42] INFO | experiment |   [anomaly] 35 clients trained on cuda in 860s
+[2026-06-29 18:10:43] INFO | experiment | Round 10/10 | 70 clients
+[2026-06-29 18:23:08] INFO | experiment |   [forecasting] 35 clients trained on cuda in 745s
+[2026-06-29 18:39:39] INFO | experiment |   [anomaly] 35 clients trained on cuda in 991s
+[2026-06-29 18:40:46] INFO | experiment |   Forecast test MSE: 0.230412 | Anomaly test MSE: 0.160513 | round 1803s
+[2026-06-29 18:40:46] INFO | experiment | FL training completed in 16455.4s
+[2026-06-29 18:40:46] INFO | experiment | --- Federated Forecasting Evaluation ---
+[2026-06-29 18:41:15] INFO | experiment |   MSE: 0.230422
+[2026-06-29 18:41:15] INFO | experiment |   RMSE: 0.480023
+[2026-06-29 18:41:15] INFO | experiment |   MAE: 0.230028
+[2026-06-29 18:41:15] INFO | experiment |   MAPE: 21.20%
+[2026-06-29 18:41:15] INFO | experiment |   SMAPE: 13.345161
+[2026-06-29 18:41:15] INFO | experiment |   WAPE: 5.729076
+[2026-06-29 18:41:15] INFO | experiment |   NRMSE: 0.119554
+[2026-06-29 18:41:15] INFO | experiment |   MASE: 2.887150
+[2026-06-29 18:41:15] INFO | experiment |   RSE: 0.260935
+[2026-06-29 18:41:15] INFO | experiment |   CORR: 0.965509
+[2026-06-29 18:41:15] INFO | experiment |   R2: 0.931913
+[2026-06-29 18:41:15] INFO | experiment | --- Federated Anomaly Detection Evaluation ---
+[2026-06-29 18:41:33] INFO | experiment |   Threshold (from val): 0.238754
+[2026-06-29 18:42:14] INFO | experiment |   F1: 0.4971
+[2026-06-29 18:42:14] INFO | experiment |   AUC_ROC: 0.7668
+[2026-06-29 18:42:14] INFO | experiment |   AUC_PR: 0.5963
+[2026-06-29 18:42:14] INFO | experiment |   PRECISION: 0.7435
+[2026-06-29 18:42:14] INFO | experiment |   RECALL: 0.3733
+[2026-06-29 18:42:14] INFO | experiment | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/federated_local_only_fedavg_s46_results.json
+[2026-06-29 18:42:14] INFO | experiment | Models saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/checkpoints
+[2026-06-29 18:42:17] INFO | experiment | ============================================================
+[2026-06-29 18:42:17] INFO | experiment | STEP 6: GENERATING RESEARCH PAPER PLOTS
+[2026-06-29 18:42:17] INFO | experiment | ============================================================
