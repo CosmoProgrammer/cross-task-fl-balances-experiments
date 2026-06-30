@@ -4,3 +4,4 @@
 [2026-06-30 16:03:47] INFO | update_conflict | Backbone compatibility verified.
 [2026-06-30 16:04:55] INFO | update_conflict | Clients: 85 forecasting + 85 anomaly
 [2026-06-30 16:04:55] INFO | update_conflict | --- Forecasting client deltas (local AdamW) ---
+[2026-06-30 16:36:33] INFO | update_conflict | --- Anomaly client deltas (local AdamW) ---
