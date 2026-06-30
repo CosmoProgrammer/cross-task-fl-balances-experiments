@@ -1,0 +1,6 @@
+[2026-06-30 16:03:47] INFO | update_conflict | Device: cuda | kernels: ON | cohort: 100
+[2026-06-30 16:03:47] INFO | update_conflict | Loaded fc=checkpoints/fed_dual_fedavg_c100_forecasting_model.pt an=checkpoints/fed_dual_fedavg_c100_anomaly_model.pt
+[2026-06-30 16:03:47] INFO | update_conflict | Single-GPU mode on cuda (available: 2, max: 1)
+[2026-06-30 16:03:47] INFO | update_conflict | Backbone compatibility verified.
+[2026-06-30 16:04:55] INFO | update_conflict | Clients: 85 forecasting + 85 anomaly
+[2026-06-30 16:04:55] INFO | update_conflict | --- Forecasting client deltas (local AdamW) ---

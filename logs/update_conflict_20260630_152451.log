@@ -1,0 +1,17 @@
+[2026-06-30 15:24:51] INFO | update_conflict | Device: cuda | kernels: ON | cohort: 50
+[2026-06-30 15:24:51] INFO | update_conflict | Loaded fc=checkpoints/fed_dual_fedavg_forecasting_model.pt an=checkpoints/fed_dual_fedavg_anomaly_model.pt
+[2026-06-30 15:24:51] INFO | update_conflict | Single-GPU mode on cuda (available: 2, max: 1)
+[2026-06-30 15:24:51] INFO | update_conflict | Backbone compatibility verified.
+[2026-06-30 15:25:08] INFO | update_conflict | Clients: 35 forecasting + 35 anomaly
+[2026-06-30 15:25:08] INFO | update_conflict | --- Forecasting client deltas (local AdamW) ---
+[2026-06-30 15:43:07] INFO | update_conflict | --- Anomaly client deltas (local AdamW) ---
+[2026-06-30 16:03:38] INFO | update_conflict | ================================================================
+[2026-06-30 16:03:38] INFO | update_conflict | UPDATE (AdamW delta)  cos(Δ_FC, Δ_AN) = 0.2406
+[2026-06-30 16:03:38] INFO | update_conflict |   ||Δ_FC||=7.5815e+00  ||Δ_AN||=8.2807e+00  ratio FC/AN=0.916  <-- the confound test
+[2026-06-30 16:03:38] INFO | update_conflict |   pairwise within-FC 0.155 | within-AN 0.482 | CROSS 0.067 (frac<0 0.002)
+[2026-06-30 16:03:38] INFO | update_conflict |   cross_scale_gates    cos=-0.3692 ||FC||=5.173e-02 ||AN||=5.142e-02
+[2026-06-30 16:03:38] INFO | update_conflict |   patch_decoders       cos=+0.3160 ||FC||=5.074e+00 ||AN||=5.791e+00
+[2026-06-30 16:03:38] INFO | update_conflict |   patch_encoders       cos=+0.1746 ||FC||=5.633e+00 ||AN||=5.919e+00
+[2026-06-30 16:03:38] INFO | update_conflict | ================================================================
+[2026-06-30 16:03:38] INFO | update_conflict | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/update_conflict_dual_c50_results.json
+[2026-06-30 16:03:39] INFO | update_conflict | Saved -> results/update_conflict_dual_c50.npz
