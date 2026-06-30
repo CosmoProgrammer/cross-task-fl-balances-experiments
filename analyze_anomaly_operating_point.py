@@ -72,12 +72,17 @@ def _precision_at_recall(scores, labels, recall_targets):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--a", required=True, help="npz dump for the smaller cohort (e.g. c50)")
-    ap.add_argument("--b", required=True, help="npz dump for the larger cohort (e.g. c100)")
+    ap.add_argument("--a", required=True, help="first npz dump (e.g. c50, or dual)")
+    ap.add_argument("--b", required=True, help="second npz dump (e.g. c100, or single_task)")
+    ap.add_argument("--label-a", default=None,
+                    help="label for --a (default cN from the dump). Use for "
+                         "same-cohort comparisons, e.g. --label-a dual --label-b single_task")
+    ap.add_argument("--label-b", default=None, help="label for --b")
     args = ap.parse_args()
 
     A, B = _load(args.a), _load(args.b)
-    la, lb = f"c{A['cohort']}", f"c{B['cohort']}"
+    la = args.label_a or f"c{A['cohort']}"
+    lb = args.label_b or f"c{B['cohort']}"
 
     # Sanity: same fixed test set -> identical label vector (count + composition)
     same_n = A["test_labels"].shape == B["test_labels"].shape
@@ -89,11 +94,11 @@ def main():
 
     # 1. Threshold-free discrimination
     print("\n=== 1. Discrimination (threshold-free) ===")
-    print(f"{'':<16}{la:>10}{lb:>10}")
+    print(f"{'':<16}{la:>12}{lb:>12}")
     for name, fn in [("AUC-ROC", roc_auc_score), ("AUC-PR", average_precision_score)]:
         va = fn(A["test_labels"], A["test_scores"])
         vb = fn(B["test_labels"], B["test_scores"])
-        print(f"{name:<16}{va:>10.4f}{vb:>10.4f}   d={vb - va:+.4f}")
+        print(f"{name:<16}{va:>12.4f}{vb:>12.4f}   d={vb - va:+.4f}")
 
     # 2a. As-reported: each model's own val-selected threshold -> its test
     print("\n=== 2a. As-reported (own val-best-F1 threshold) ===")
@@ -121,12 +126,14 @@ def main():
     targets = [0.30, 0.40, 0.50, 0.60, 0.70, 0.80]
     pa = _precision_at_recall(A["test_scores"], A["test_labels"], targets)
     pb = _precision_at_recall(B["test_scores"], B["test_labels"], targets)
-    print(f"{'recall':>8}{la:>10}{lb:>10}{'  delta':>10}")
+    print(f"{'recall':>8}{la:>12}{lb:>12}{'delta':>10}")
     for rt in targets:
-        print(f"{rt:>8.2f}{pa[rt]:>10.3f}{pb[rt]:>10.3f}{pb[rt] - pa[rt]:>+10.3f}")
+        print(f"{rt:>8.2f}{pa[rt]:>12.3f}{pb[rt]:>12.3f}{pb[rt] - pa[rt]:>+10.3f}")
 
-    print("\nReading: flat AUC + flat P@R => more data did NOT improve "
-          "discrimination; the reported F1 swing is threshold selection.\n")
+    print("\nReading: AUC + P@R + oracle-F1 are the threshold-FREE quality of the "
+          "detector; if they differ, that's a real difference. If they're flat but "
+          "the as-reported F1 (2a) differs, the gap is threshold SELECTION (2b/2c), "
+          "not discrimination.\n")
 
 
 if __name__ == "__main__":
