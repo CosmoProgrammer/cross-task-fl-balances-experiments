@@ -1,0 +1,61 @@
+{
+  "experiment": "gradient_conflict",
+  "tag": "random_init",
+  "cohort": 50,
+  "checkpoints": {
+    "forecasting": "checkpoints/fed_dual_fedavg_forecasting_model.pt",
+    "anomaly": "checkpoints/fed_dual_fedavg_anomaly_model.pt",
+    "random_init": true
+  },
+  "n_clients": {
+    "forecasting": 35,
+    "anomaly": 35
+  },
+  "headline_cos_agg": 0.7691418025426031,
+  "norm_fc": 2.674106150936758,
+  "norm_an": 7.172001304167163,
+  "mag_ratio_fc_over_an": 0.37285355056795877,
+  "pcgrad_conflict_an_on_fc": 0.0,
+  "pcgrad_conflict_fc_on_an": 0.0,
+  "pairwise": {
+    "within_fc": {
+      "mean": 0.9923735881682683,
+      "std": 0.012218614646376321,
+      "median": 0.9966123969524913,
+      "n": 595
+    },
+    "within_an": {
+      "mean": 0.967843249806767,
+      "std": 0.04174388686995104,
+      "median": 0.9854550825508743,
+      "n": 595
+    },
+    "cross": {
+      "mean": 0.7832381969101565,
+      "std": 0.09534107352034106,
+      "median": 0.769355021718011,
+      "n": 1225
+    },
+    "frac_cross_negative": 0.0
+  },
+  "per_module": {
+    "patch_encoders": {
+      "cos_agg": 0.5103414803669911,
+      "norm_fc": 0.22418319643300302,
+      "norm_an": 4.585128394052612,
+      "n_scalars": 414865
+    },
+    "cross_scale_gates": {
+      "cos_agg": 0.2805145148215479,
+      "norm_fc": 0.04909416665027841,
+      "norm_an": 0.1716595298620753,
+      "n_scalars": 20
+    },
+    "patch_decoders": {
+      "cos_agg": 0.9685595806035515,
+      "norm_fc": 2.664240109996807,
+      "norm_an": 5.512234875514245,
+      "n_scalars": 414905
+    }
+  }
+}
