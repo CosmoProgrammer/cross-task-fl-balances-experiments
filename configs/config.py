@@ -97,6 +97,12 @@ class ExperimentConfig:
     aggregation_mode: str = "dual"    # "dual", "single_task", "local_only"
     fl_strategy: str = "fedavg"       # "fedavg", "fedprox", "scaffold" (Scaffold is dropped now)
     fedprox_mu: float = 0.01          # proximal term weight for FedProx
+    # Selective backbone sharing (dual mode only): which backbone MODULES are
+    # cross-task-shared (averaged across ALL clients). Backbone modules NOT listed
+    # become task-private (averaged within task group, like heads). None => share
+    # the whole backbone == the original `dual`. Set via main.py --share-modules.
+    # Tuple of name prefixes, e.g. ("patch_decoders.", "cross_scale_gates.").
+    cross_shared_modules: tuple = None
     scaffold_lr: float = 1.0          # SCAFFOLD server learning rate (scaffold is dropped now)
 
     # ── Anomaly-specific ──
@@ -156,4 +162,7 @@ class ExperimentConfig:
         add `_c{N}`; seeds != 42 add `_s{seed}` (multi-seed studies coexist)."""
         ctag = "" if self.cohort_size == 50 else f"_c{self.cohort_size}"
         stag = "" if self.seed == 42 else f"_s{self.seed}"
-        return ctag + stag
+        # selective-sharing variants (set by main.py) tag distinctly so they never
+        # clobber the dual/single anchors; empty for the default whole-backbone dual.
+        shtag = getattr(self, "share_tag", "")
+        return ctag + stag + shtag

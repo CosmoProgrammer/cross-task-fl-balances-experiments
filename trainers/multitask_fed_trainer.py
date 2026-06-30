@@ -63,6 +63,11 @@ class MultiTaskFederatedTrainer:
         self.aggregation_mode = getattr(config, 'aggregation_mode', 'dual')
         self.fl_strategy = getattr(config, 'fl_strategy', 'fedavg')
         self.fedprox_mu = getattr(config, 'fedprox_mu', 0.01)
+        # Selective backbone sharing (dual only): which backbone modules are
+        # cross-task-shared. None => whole backbone == original dual. Backbone
+        # params outside this set are aggregated within task group (task-private).
+        self.cross_shared_modules = (getattr(config, 'cross_shared_modules', None)
+                                     or BACKBONE_PREFIXES)
 
         self.forecasting_model = forecasting_model.to(device)
         self.anomaly_model = anomaly_model.to(device)
@@ -239,13 +244,24 @@ class MultiTaskFederatedTrainer:
 
     # ── Aggregation methods ──
 
+    def _is_cross_shared(self, name):
+        """True if a (backbone) param is cross-task shared under the active
+        sharing scheme. Non-backbone params are never cross-shared (heads)."""
+        return _is_backbone(name) and any(
+            name.startswith(p) for p in self.cross_shared_modules)
+
     def _dual_aggregate(self, forecast_clients, forecast_weights,
                         anomaly_clients, anomaly_weights):
         """
-        Dual FedAvg aggregation (proposed method):
-          1. Backbone: weighted average across ALL 70 clients
-          2. Forecasting heads: weighted average across 35 forecasting clients
-          3. Anomaly heads: weighted average across 35 anomaly clients
+        Dual FedAvg aggregation (proposed method), with optional SELECTIVE sharing:
+          1. Cross-shared backbone modules: weighted avg across ALL 70 clients.
+          2. Everything else, per model, weighted-averaged WITHIN its task group:
+             - forecasting model: task-private backbone modules + forecasting heads
+               over the 35 forecasting clients;
+             - anomaly model: task-private backbone modules + anomaly heads over the
+               35 anomaly clients.
+        When `cross_shared_modules` covers the whole backbone (the default), (2)
+        reduces to "heads only" and this is byte-identical to the original dual.
         """
         all_weights_raw = forecast_weights + anomaly_weights
         total = sum(all_weights_raw)
@@ -261,52 +277,33 @@ class MultiTaskFederatedTrainer:
         an_client_states = [m.state_dict() for m in anomaly_clients]
         all_client_states = fc_client_states + an_client_states
 
-        # 1. Aggregate backbone across ALL 70 clients
-        global_backbone = {}
+        def _avg(name, states, weights, ref):
+            """Weighted average of `name` over `states`; copy for int buffers."""
+            if not ref[name].is_floating_point():
+                return states[0][name]
+            agg = torch.zeros_like(ref[name])
+            for sd, w in zip(states, weights):
+                agg += w * sd[name]
+            return agg
+
         fc_state = self.forecasting_model.state_dict()
-        for name in fc_state:
-            if not _is_backbone(name):
-                continue
-            if fc_state[name].is_floating_point():
-                agg = torch.zeros_like(fc_state[name])
-                for sd, w in zip(all_client_states, all_weights):
-                    agg += w * sd[name]
-                global_backbone[name] = agg
-            else:
-                global_backbone[name] = all_client_states[0][name]
-
-        # 2. Aggregate forecasting heads across 35 forecasting clients
-        global_fc_heads = {}
-        for name in fc_state:
-            if _is_backbone(name):
-                continue
-            if fc_state[name].is_floating_point():
-                agg = torch.zeros_like(fc_state[name])
-                for sd, w in zip(fc_client_states, fc_weights_norm):
-                    agg += w * sd[name]
-                global_fc_heads[name] = agg
-            else:
-                global_fc_heads[name] = fc_client_states[0][name]
-
-        # 3. Aggregate anomaly heads across 35 anomaly clients
         an_state = self.anomaly_model.state_dict()
-        global_an_heads = {}
-        for name in an_state:
-            if _is_backbone(name):
-                continue
-            if an_state[name].is_floating_point():
-                agg = torch.zeros_like(an_state[name])
-                for sd, w in zip(an_client_states, an_weights_norm):
-                    agg += w * sd[name]
-                global_an_heads[name] = agg
-            else:
-                global_an_heads[name] = an_client_states[0][name]
 
-        # 4. Load into global models
-        self.forecasting_model.load_state_dict(
-            {**global_backbone, **global_fc_heads})
-        self.anomaly_model.load_state_dict(
-            {**global_backbone, **global_an_heads})
+        # 1. Cross-shared backbone: average across ALL clients
+        global_shared = {name: _avg(name, all_client_states, all_weights, fc_state)
+                         for name in fc_state if self._is_cross_shared(name)}
+
+        # 2a. Forecasting model: everything not cross-shared, over forecasting clients
+        fc_private = {name: _avg(name, fc_client_states, fc_weights_norm, fc_state)
+                      for name in fc_state if name not in global_shared}
+
+        # 2b. Anomaly model: everything not cross-shared, over anomaly clients
+        an_private = {name: _avg(name, an_client_states, an_weights_norm, an_state)
+                      for name in an_state if name not in global_shared}
+
+        # 3. Load into global models
+        self.forecasting_model.load_state_dict({**global_shared, **fc_private})
+        self.anomaly_model.load_state_dict({**global_shared, **an_private})
 
     def _single_task_aggregate(self, forecast_clients, forecast_weights,
                                anomaly_clients, anomaly_weights):

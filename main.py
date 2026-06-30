@@ -523,6 +523,16 @@ def main():
                              "history becomes sparse). K>1 trims the per-round eval "
                              "cost (~12%% of a round); handy for long multi-seed "
                              "sweeps. Default = config (1).")
+    parser.add_argument("--share-modules", default=None, dest="share_modules",
+                        help="SELECTIVE backbone sharing for --mode dual: comma list "
+                             "of backbone modules cross-task-shared across ALL clients; "
+                             "the rest become task-private (within-group avg, like "
+                             "heads). Tokens: encoders,decoders,gates. E.g. "
+                             "`--share-modules decoders,gates` shares decoders+gates "
+                             "and keeps encoders per-task (the encoder-conflict probe). "
+                             "Omitted => share the whole backbone == standard dual. "
+                             "Outputs tag `_share-<tokens>` so variants never clobber "
+                             "the dual/single anchors.")
     args = parser.parse_args()
 
     run_all = not (args.preprocess or args.federated or args.centralized
@@ -539,6 +549,24 @@ def main():
         config.num_rounds = args.rounds
     if args.eval_every is not None:
         config.eval_every = args.eval_every
+
+    # Selective backbone sharing (dual only): map module tokens -> name prefixes,
+    # set the shared set, and tag outputs distinctly so variants coexist with the
+    # dual/single anchors.
+    if args.share_modules:
+        _MOD_PREFIX = {"encoders": "patch_encoders.",
+                       "decoders": "patch_decoders.",
+                       "gates": "cross_scale_gates."}
+        toks = [t.strip() for t in args.share_modules.split(",") if t.strip()]
+        bad = [t for t in toks if t not in _MOD_PREFIX]
+        if bad:
+            parser.error(f"--share-modules: unknown {bad}; choose from "
+                         f"{sorted(_MOD_PREFIX)}")
+        config.cross_shared_modules = tuple(_MOD_PREFIX[t] for t in toks)
+        config.share_tag = "_share-" + "-".join(sorted(toks))
+        if config.aggregation_mode != "dual":
+            print(f"[warn] --share-modules only affects --mode dual; "
+                  f"ignored for mode={config.aggregation_mode}")
 
     # Setup logging
     os.makedirs(config.log_dir, exist_ok=True)
