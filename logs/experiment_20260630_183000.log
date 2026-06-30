@@ -1,47 +1,3 @@
-nohup: ignoring input
-########## SELECTIVE SHARING | cohort 50 | seeds 42 | DIAG_ONLY=0 ##########
---- SKIP (exists): results/update_conflict_dual_c50_results.json
-=== [2026-06-30 17:11:37] RUN: delta-conflict dual c100
-[2026-06-30 17:11:45] INFO | update_conflict | Device: cuda | kernels: ON | cohort: 100
-[2026-06-30 17:11:46] INFO | update_conflict | Loaded fc=checkpoints/fed_dual_fedavg_c100_forecasting_model.pt an=checkpoints/fed_dual_fedavg_c100_anomaly_model.pt
-[2026-06-30 17:11:46] INFO | update_conflict | Single-GPU mode on cuda (available: 2, max: 1)
-[2026-06-30 17:11:46] INFO | update_conflict | Backbone compatibility verified.
-[FL-ASHRAE] 85 clients, 15 test buildings
-[FL-ASHRAE] 85 active clients, 85916 test windows
-[FL-LEAD] 85 clients, 15 test buildings
-[FL-LEAD] 85 active clients, 138122 val, 129708 test windows
-[2026-06-30 17:13:03] INFO | update_conflict | Clients: 85 forecasting + 85 anomaly
-[2026-06-30 17:13:03] INFO | update_conflict | --- Forecasting client deltas (local AdamW) ---
-[2026-06-30 17:49:28] INFO | update_conflict | --- Anomaly client deltas (local AdamW) ---
-[2026-06-30 18:29:37] INFO | update_conflict | ================================================================
-[2026-06-30 18:29:37] INFO | update_conflict | UPDATE (AdamW delta)  cos(Δ_FC, Δ_AN) = 0.2663
-[2026-06-30 18:29:37] INFO | update_conflict |   ||Δ_FC||=7.3696e+00  ||Δ_AN||=8.1802e+00  ratio FC/AN=0.901  <-- the confound test
-[2026-06-30 18:29:37] INFO | update_conflict |   pairwise within-FC 0.157 | within-AN 0.448 | CROSS 0.069 (frac<0 0.000)
-[2026-06-30 18:29:37] INFO | update_conflict |   patch_encoders       cos=+0.2099 ||FC||=5.401e+00 ||AN||=5.831e+00
-[2026-06-30 18:29:37] INFO | update_conflict |   patch_decoders       cos=+0.3283 ||FC||=5.014e+00 ||AN||=5.737e+00
-[2026-06-30 18:29:37] INFO | update_conflict |   cross_scale_gates    cos=-0.3251 ||FC||=4.251e-02 ||AN||=5.424e-02
-[2026-06-30 18:29:37] INFO | update_conflict | ================================================================
-[2026-06-30 18:29:37] INFO | update_conflict | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/update_conflict_dual_c100_results.json
-[2026-06-30 18:29:38] INFO | update_conflict | Saved -> results/update_conflict_dual_c100.npz
-=== done: delta-conflict dual c100
---- git: committed (selective-sharing PART A: AdamW-delta conflict diagnostic)
---- git: pushed
-=== [2026-06-30 18:29:52] RUN: B1 share decoders+gates (enc private) seed 42
-Traceback (most recent call last):
-  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 653, in <module>
-    main()
-  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 647, in main
-    run_visualization(config, log)
-  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 411, in run_visualization
-    from visualization.plots import generate_all_plots
-  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/visualization/plots.py", line 5, in <module>
-    import matplotlib
-  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/matplotlib/__init__.py", line 159, in <module>
-    from . import _api, _version, cbook, _docstring, rcsetup
-  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/matplotlib/rcsetup.py", line 33, in <module>
-    from cycler import Cycler, cycler as ccycler
-ModuleNotFoundError: No module named 'cycler'
-ERROR conda.cli.main_run:execute(148): `conda run python main.py --federated --mode dual --strategy fedavg --cohort 50 --seed 42 --eval-every 5 --share-modules decoders,gates` failed. (See above for error)
 [2026-06-30 18:30:00] INFO | experiment | Device: cuda
 [2026-06-30 18:30:00] INFO | experiment | Cohort: 50 buildings/dataset (tag='_share-decoders-gates') | ashrae=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed | lead=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed
 [2026-06-30 18:30:00] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
@@ -49,10 +5,6 @@ ERROR conda.cli.main_run:execute(148): `conda run python main.py --federated --m
 [2026-06-30 18:30:00] INFO | experiment | STEP 2: MULTI-TASK FEDERATED LEARNING
 [2026-06-30 18:30:00] INFO | experiment |   Mode: dual | Strategy: fedavg
 [2026-06-30 18:30:00] INFO | experiment | ============================================================
-[FL-ASHRAE] 35 clients, 15 test buildings
-[FL-ASHRAE] 35 active clients, 85916 test windows
-[FL-LEAD] 35 clients, 15 test buildings
-[FL-LEAD] 35 active clients, 56934 val, 129708 test windows
 [2026-06-30 18:30:15] INFO | experiment | Forecasting model params: 884,999
 [2026-06-30 18:30:15] INFO | experiment | Anomaly model params:     976,623
 [2026-06-30 18:30:15] INFO | experiment | Shared backbone params:   829,790
@@ -124,4 +76,3 @@ ERROR conda.cli.main_run:execute(148): `conda run python main.py --federated --m
 [2026-06-30 23:38:41] INFO | experiment | ============================================================
 [2026-06-30 23:38:41] INFO | experiment | STEP 6: GENERATING RESEARCH PAPER PLOTS
 [2026-06-30 23:38:41] INFO | experiment | ============================================================
-!! FAILED: B1 share decoders+gates (enc private) seed 42 (continuing)
