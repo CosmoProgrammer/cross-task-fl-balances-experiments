@@ -1,0 +1,43 @@
+{
+  "experiment": "update_conflict_adamw_delta",
+  "tag": "dual_c100",
+  "cohort": 100,
+  "checkpoints": {
+    "forecasting": "checkpoints/fed_dual_fedavg_c100_forecasting_model.pt",
+    "anomaly": "checkpoints/fed_dual_fedavg_c100_anomaly_model.pt"
+  },
+  "n_clients": {
+    "forecasting": 85,
+    "anomaly": 85
+  },
+  "headline_cos_agg": 0.26629206168910596,
+  "norm_fc": 7.369592203434387,
+  "norm_an": 8.180204564335734,
+  "mag_ratio_fc_over_an": 0.9009056125032037,
+  "pairwise": {
+    "within_fc_mean": 0.1570894283779772,
+    "within_an_mean": 0.4482954683546198,
+    "cross_mean": 0.0691772257811021,
+    "frac_cross_negative": 0.0
+  },
+  "per_module": {
+    "patch_encoders": {
+      "cos_agg": 0.20993244859602858,
+      "norm_fc": 5.400693450568709,
+      "norm_an": 5.8306568556672245,
+      "n_scalars": 414865
+    },
+    "patch_decoders": {
+      "cos_agg": 0.3282673768538823,
+      "norm_fc": 5.014139244060549,
+      "norm_an": 5.7372681210443695,
+      "n_scalars": 414905
+    },
+    "cross_scale_gates": {
+      "cos_agg": -0.3251349161771433,
+      "norm_fc": 0.0425104584432153,
+      "norm_an": 0.054238852199848316,
+      "n_scalars": 20
+    }
+  }
+}

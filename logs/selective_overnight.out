@@ -1,0 +1,26 @@
+nohup: ignoring input
+########## SELECTIVE SHARING | cohort 50 | seeds 42 | DIAG_ONLY=0 ##########
+--- SKIP (exists): results/update_conflict_dual_c50_results.json
+=== [2026-06-30 17:11:37] RUN: delta-conflict dual c100
+[2026-06-30 17:11:45] INFO | update_conflict | Device: cuda | kernels: ON | cohort: 100
+[2026-06-30 17:11:46] INFO | update_conflict | Loaded fc=checkpoints/fed_dual_fedavg_c100_forecasting_model.pt an=checkpoints/fed_dual_fedavg_c100_anomaly_model.pt
+[2026-06-30 17:11:46] INFO | update_conflict | Single-GPU mode on cuda (available: 2, max: 1)
+[2026-06-30 17:11:46] INFO | update_conflict | Backbone compatibility verified.
+[FL-ASHRAE] 85 clients, 15 test buildings
+[FL-ASHRAE] 85 active clients, 85916 test windows
+[FL-LEAD] 85 clients, 15 test buildings
+[FL-LEAD] 85 active clients, 138122 val, 129708 test windows
+[2026-06-30 17:13:03] INFO | update_conflict | Clients: 85 forecasting + 85 anomaly
+[2026-06-30 17:13:03] INFO | update_conflict | --- Forecasting client deltas (local AdamW) ---
+[2026-06-30 17:49:28] INFO | update_conflict | --- Anomaly client deltas (local AdamW) ---
+[2026-06-30 18:29:37] INFO | update_conflict | ================================================================
+[2026-06-30 18:29:37] INFO | update_conflict | UPDATE (AdamW delta)  cos(Δ_FC, Δ_AN) = 0.2663
+[2026-06-30 18:29:37] INFO | update_conflict |   ||Δ_FC||=7.3696e+00  ||Δ_AN||=8.1802e+00  ratio FC/AN=0.901  <-- the confound test
+[2026-06-30 18:29:37] INFO | update_conflict |   pairwise within-FC 0.157 | within-AN 0.448 | CROSS 0.069 (frac<0 0.000)
+[2026-06-30 18:29:37] INFO | update_conflict |   patch_encoders       cos=+0.2099 ||FC||=5.401e+00 ||AN||=5.831e+00
+[2026-06-30 18:29:37] INFO | update_conflict |   patch_decoders       cos=+0.3283 ||FC||=5.014e+00 ||AN||=5.737e+00
+[2026-06-30 18:29:37] INFO | update_conflict |   cross_scale_gates    cos=-0.3251 ||FC||=4.251e-02 ||AN||=5.424e-02
+[2026-06-30 18:29:37] INFO | update_conflict | ================================================================
+[2026-06-30 18:29:37] INFO | update_conflict | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/update_conflict_dual_c100_results.json
+[2026-06-30 18:29:38] INFO | update_conflict | Saved -> results/update_conflict_dual_c100.npz
+=== done: delta-conflict dual c100
