@@ -125,3 +125,104 @@ ERROR conda.cli.main_run:execute(148): `conda run python main.py --federated --m
 [2026-06-30 23:38:41] INFO | experiment | STEP 6: GENERATING RESEARCH PAPER PLOTS
 [2026-06-30 23:38:41] INFO | experiment | ============================================================
 !! FAILED: B1 share decoders+gates (enc private) seed 42 (continuing)
+--- git: committed (selective-sharing B1 (share decoders+gates) seed 42)
+--- git: pushed
+=== [2026-06-30 23:38:44] RUN: B2 share encoders only seed 42
+Traceback (most recent call last):
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 653, in <module>
+    main()
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 647, in main
+    run_visualization(config, log)
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/main.py", line 411, in run_visualization
+    from visualization.plots import generate_all_plots
+  File "/home/samy/yuvaraj/cross-task-fl-balances-experiments/visualization/plots.py", line 5, in <module>
+    import matplotlib
+  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/matplotlib/__init__.py", line 159, in <module>
+    from . import _api, _version, cbook, _docstring, rcsetup
+  File "/home/samy/miniconda3/envs/yuv_fl/lib/python3.10/site-packages/matplotlib/rcsetup.py", line 33, in <module>
+    from cycler import Cycler, cycler as ccycler
+ModuleNotFoundError: No module named 'cycler'
+ERROR conda.cli.main_run:execute(148): `conda run python main.py --federated --mode dual --strategy fedavg --cohort 50 --seed 42 --eval-every 5 --share-modules encoders` failed. (See above for error)
+[2026-06-30 23:38:49] INFO | experiment | Device: cuda
+[2026-06-30 23:38:49] INFO | experiment | Cohort: 50 buildings/dataset (tag='_share-encoders') | ashrae=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed | lead=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed
+[2026-06-30 23:38:49] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
+[2026-06-30 23:38:49] INFO | experiment | ============================================================
+[2026-06-30 23:38:49] INFO | experiment | STEP 2: MULTI-TASK FEDERATED LEARNING
+[2026-06-30 23:38:49] INFO | experiment |   Mode: dual | Strategy: fedavg
+[2026-06-30 23:38:49] INFO | experiment | ============================================================
+[FL-ASHRAE] 35 clients, 15 test buildings
+[FL-ASHRAE] 35 active clients, 85916 test windows
+[FL-LEAD] 35 clients, 15 test buildings
+[FL-LEAD] 35 active clients, 56934 val, 129708 test windows
+[2026-06-30 23:39:04] INFO | experiment | Forecasting model params: 884,999
+[2026-06-30 23:39:04] INFO | experiment | Anomaly model params:     976,623
+[2026-06-30 23:39:04] INFO | experiment | Shared backbone params:   829,790
+[2026-06-30 23:39:04] INFO | experiment | Forecasting head params:  55,209
+[2026-06-30 23:39:04] INFO | experiment | Anomaly head params:      146,833
+[2026-06-30 23:39:04] INFO | experiment | Single-GPU mode on cuda (available: 2, max: 1)
+[2026-06-30 23:39:04] INFO | experiment | Backbone compatibility verified.
+[2026-06-30 23:39:04] INFO | experiment | Multi-Task Federated Training
+[2026-06-30 23:39:04] INFO | experiment |   Mode: dual | Strategy: fedavg
+[2026-06-30 23:39:04] INFO | experiment |   Forecasting clients: 35
+[2026-06-30 23:39:04] INFO | experiment |   Anomaly clients:     35
+[2026-06-30 23:39:04] INFO | experiment |   Total clients:       70
+[2026-06-30 23:39:04] INFO | experiment |   Rounds: 10, Local epochs: 5
+[2026-06-30 23:39:04] INFO | experiment |   GPUs: 1
+[2026-06-30 23:39:04] INFO | experiment | Round 1/10 | 70 clients
+[2026-06-30 23:52:01] INFO | experiment |   [forecasting] 35 clients trained on cuda in 777s
+[2026-07-01 00:07:51] INFO | experiment |   [anomaly] 35 clients trained on cuda in 950s
+[2026-07-01 00:07:52] INFO | experiment | Round 2/10 | 70 clients
+[2026-07-01 00:21:59] INFO | experiment |   [forecasting] 35 clients trained on cuda in 847s
+[2026-07-01 00:39:20] INFO | experiment |   [anomaly] 35 clients trained on cuda in 1042s
+[2026-07-01 00:39:21] INFO | experiment | Round 3/10 | 70 clients
+[2026-07-01 00:58:07] INFO | experiment |   [forecasting] 35 clients trained on cuda in 1126s
+[2026-07-01 01:12:50] INFO | experiment |   [anomaly] 35 clients trained on cuda in 883s
+[2026-07-01 01:12:50] INFO | experiment | Round 4/10 | 70 clients
+[2026-07-01 01:26:02] INFO | experiment |   [forecasting] 35 clients trained on cuda in 792s
+[2026-07-01 01:43:03] INFO | experiment |   [anomaly] 35 clients trained on cuda in 1022s
+[2026-07-01 01:43:04] INFO | experiment | Round 5/10 | 70 clients
+[2026-07-01 01:57:36] INFO | experiment |   [forecasting] 35 clients trained on cuda in 872s
+[2026-07-01 02:19:59] INFO | experiment |   [anomaly] 35 clients trained on cuda in 1343s
+[2026-07-01 02:21:19] INFO | experiment |   Forecast test MSE: 0.233214 | Anomaly test MSE: 0.085853 | round 2295s
+[2026-07-01 02:21:19] INFO | experiment | Round 6/10 | 70 clients
+[2026-07-01 02:34:29] INFO | experiment |   [forecasting] 35 clients trained on cuda in 790s
+[2026-07-01 02:50:33] INFO | experiment |   [anomaly] 35 clients trained on cuda in 964s
+[2026-07-01 02:50:33] INFO | experiment | Round 7/10 | 70 clients
+[2026-07-01 03:04:06] INFO | experiment |   [forecasting] 35 clients trained on cuda in 813s
+[2026-07-01 03:20:50] INFO | experiment |   [anomaly] 35 clients trained on cuda in 1004s
+[2026-07-01 03:20:51] INFO | experiment | Round 8/10 | 70 clients
+[2026-07-01 03:34:30] INFO | experiment |   [forecasting] 35 clients trained on cuda in 819s
+[2026-07-01 03:50:06] INFO | experiment |   [anomaly] 35 clients trained on cuda in 936s
+[2026-07-01 03:50:07] INFO | experiment | Round 9/10 | 70 clients
+[2026-07-01 04:08:22] INFO | experiment |   [forecasting] 35 clients trained on cuda in 1095s
+[2026-07-01 04:22:24] INFO | experiment |   [anomaly] 35 clients trained on cuda in 842s
+[2026-07-01 04:22:25] INFO | experiment | Round 10/10 | 70 clients
+[2026-07-01 04:34:39] INFO | experiment |   [forecasting] 35 clients trained on cuda in 735s
+[2026-07-01 04:49:01] INFO | experiment |   [anomaly] 35 clients trained on cuda in 861s
+[2026-07-01 04:50:03] INFO | experiment |   Forecast test MSE: 0.217802 | Anomaly test MSE: 0.066456 | round 1658s
+[2026-07-01 04:50:03] INFO | experiment | FL training completed in 18658.8s
+[2026-07-01 04:50:03] INFO | experiment | --- Federated Forecasting Evaluation ---
+[2026-07-01 04:50:28] INFO | experiment |   MSE: 0.217812
+[2026-07-01 04:50:28] INFO | experiment |   RMSE: 0.466703
+[2026-07-01 04:50:28] INFO | experiment |   MAE: 0.208568
+[2026-07-01 04:50:28] INFO | experiment |   MAPE: 22.63%
+[2026-07-01 04:50:28] INFO | experiment |   SMAPE: 12.936573
+[2026-07-01 04:50:28] INFO | experiment |   WAPE: 5.194591
+[2026-07-01 04:50:28] INFO | experiment |   NRMSE: 0.116237
+[2026-07-01 04:50:28] INFO | experiment |   MASE: 2.617798
+[2026-07-01 04:50:28] INFO | experiment |   RSE: 0.253695
+[2026-07-01 04:50:28] INFO | experiment |   CORR: 0.967396
+[2026-07-01 04:50:28] INFO | experiment |   R2: 0.935639
+[2026-07-01 04:50:28] INFO | experiment | --- Federated Anomaly Detection Evaluation ---
+[2026-07-01 04:50:46] INFO | experiment |   Threshold (from val): 0.073722
+[2026-07-01 04:51:24] INFO | experiment |   F1: 0.5134
+[2026-07-01 04:51:24] INFO | experiment |   AUC_ROC: 0.8076
+[2026-07-01 04:51:24] INFO | experiment |   AUC_PR: 0.6421
+[2026-07-01 04:51:24] INFO | experiment |   PRECISION: 0.8467
+[2026-07-01 04:51:24] INFO | experiment |   RECALL: 0.3684
+[2026-07-01 04:51:24] INFO | experiment | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/federated_dual_fedavg_share-encoders_results.json
+[2026-07-01 04:51:24] INFO | experiment | Models saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/checkpoints
+[2026-07-01 04:51:27] INFO | experiment | ============================================================
+[2026-07-01 04:51:27] INFO | experiment | STEP 6: GENERATING RESEARCH PAPER PLOTS
+[2026-07-01 04:51:27] INFO | experiment | ============================================================
+!! FAILED: B2 share encoders only seed 42 (continuing)
