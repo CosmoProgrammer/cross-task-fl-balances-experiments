@@ -1,0 +1,19 @@
+[2026-06-30 12:32:26] INFO | grad_conflict | Device: cuda | Mamba fused kernels: ON | cohort: 50
+[2026-06-30 12:32:26] INFO | grad_conflict | RANDOM INIT (round-0 baseline) — no checkpoints loaded
+[2026-06-30 12:32:26] INFO | grad_conflict | Backbone: 340 parameter tensors, 829790 scalars
+[2026-06-30 12:32:26] INFO | grad_conflict | Shared-point check: max |fc_backbone - an_backbone| = 0.00e+00
+[2026-06-30 12:32:40] INFO | grad_conflict | Clients: 35 forecasting + 35 anomaly
+[2026-06-30 12:32:40] INFO | grad_conflict | --- Forecasting client gradients ---
+[2026-06-30 12:34:41] INFO | grad_conflict | --- Anomaly client gradients ---
+[2026-06-30 12:37:40] INFO | grad_conflict | ================================================================
+[2026-06-30 12:37:40] INFO | grad_conflict | HEADLINE  cos(g_FC, g_AN) on shared backbone = 0.7691
+[2026-06-30 12:37:40] INFO | grad_conflict |   ||g_FC||=2.6741e+00  ||g_AN||=7.1720e+00  ratio FC/AN=0.373
+[2026-06-30 12:37:40] INFO | grad_conflict |   PCGrad conflict: AN-on-FC=0.0000e+00  FC-on-AN=0.0000e+00
+[2026-06-30 12:37:40] INFO | grad_conflict | Pairwise cosine  within-FC: mean 0.992 (n=595) | within-AN: mean 0.968 (n=595) | CROSS: mean 0.783 (n=1225), frac<0 0.000
+[2026-06-30 12:37:40] INFO | grad_conflict | Per-module cos(g_FC,g_AN):
+[2026-06-30 12:37:40] INFO | grad_conflict |   patch_encoders       cos=+0.5103  ||FC||=2.242e-01 ||AN||=4.585e+00 (414865 scalars)
+[2026-06-30 12:37:40] INFO | grad_conflict |   cross_scale_gates    cos=+0.2805  ||FC||=4.909e-02 ||AN||=1.717e-01 (20 scalars)
+[2026-06-30 12:37:40] INFO | grad_conflict |   patch_decoders       cos=+0.9686  ||FC||=2.664e+00 ||AN||=5.512e+00 (414905 scalars)
+[2026-06-30 12:37:40] INFO | grad_conflict | ================================================================
+[2026-06-30 12:37:40] INFO | grad_conflict | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/grad_conflict_random_init_results.json
+[2026-06-30 12:37:40] INFO | grad_conflict | Saved pairwise/grad artifact -> /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/grad_conflict_random_init.npz

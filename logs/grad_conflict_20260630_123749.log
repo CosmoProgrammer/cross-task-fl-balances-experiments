@@ -1,0 +1,19 @@
+[2026-06-30 12:37:49] INFO | grad_conflict | Device: cuda | Mamba fused kernels: ON | cohort: 100
+[2026-06-30 12:37:49] INFO | grad_conflict | Loaded fc=checkpoints/fed_dual_fedavg_c100_forecasting_model.pt an=checkpoints/fed_dual_fedavg_c100_anomaly_model.pt
+[2026-06-30 12:37:49] INFO | grad_conflict | Backbone: 340 parameter tensors, 829790 scalars
+[2026-06-30 12:37:49] INFO | grad_conflict | Shared-point check: max |fc_backbone - an_backbone| = 0.00e+00
+[2026-06-30 12:38:58] INFO | grad_conflict | Clients: 85 forecasting + 85 anomaly
+[2026-06-30 12:38:58] INFO | grad_conflict | --- Forecasting client gradients ---
+[2026-06-30 12:44:14] INFO | grad_conflict | --- Anomaly client gradients ---
+[2026-06-30 12:51:58] INFO | grad_conflict | ================================================================
+[2026-06-30 12:51:58] INFO | grad_conflict | HEADLINE  cos(g_FC, g_AN) on shared backbone = -0.0298
+[2026-06-30 12:51:58] INFO | grad_conflict |   ||g_FC||=4.2600e+01  ||g_AN||=2.8218e+00  ratio FC/AN=15.096
+[2026-06-30 12:51:58] INFO | grad_conflict |   PCGrad conflict: AN-on-FC=8.4086e-02  FC-on-AN=1.2694e+00
+[2026-06-30 12:51:58] INFO | grad_conflict | Pairwise cosine  within-FC: mean 0.873 (n=3570) | within-AN: mean 0.763 (n=3570) | CROSS: mean 0.008 (n=7225), frac<0 0.521
+[2026-06-30 12:51:58] INFO | grad_conflict | Per-module cos(g_FC,g_AN):
+[2026-06-30 12:51:58] INFO | grad_conflict |   patch_encoders       cos=-0.1166  ||FC||=2.497e+01 ||AN||=2.439e+00 (414865 scalars)
+[2026-06-30 12:51:58] INFO | grad_conflict |   cross_scale_gates    cos=-0.1240  ||FC||=3.782e+00 ||AN||=4.140e-01 (20 scalars)
+[2026-06-30 12:51:58] INFO | grad_conflict |   patch_decoders       cos=+0.0797  ||FC||=3.431e+01 ||AN||=1.357e+00 (414905 scalars)
+[2026-06-30 12:51:58] INFO | grad_conflict | ================================================================
+[2026-06-30 12:51:58] INFO | grad_conflict | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/grad_conflict_dual_c100_results.json
+[2026-06-30 12:51:59] INFO | grad_conflict | Saved pairwise/grad artifact -> /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/grad_conflict_dual_c100.npz
