@@ -374,9 +374,17 @@ class MultiTaskFederatedTrainer:
             delta_sum = torch.zeros_like(self.global_control_fc[name])
             n = 0
             for cid in fc_ids:
-                if cid in self.client_controls_fc and cid in old_fc_controls:
-                    delta_sum += (self.client_controls_fc[cid][name]
-                                  - old_fc_controls[cid][name])
+                if cid in self.client_controls_fc:
+                    new_c = self.client_controls_fc[cid][name]
+                    # A client seen for the FIRST time this round had control 0
+                    # at round start (lazily created during training), so its
+                    # snapshot is absent from old_*_controls. Treat missing as
+                    # zero — skipping it drops that client's control mass and
+                    # breaks the invariant c == mean(c_i) (SCAFFOLD paper).
+                    old_c = old_fc_controls.get(cid, {}).get(name)
+                    if old_c is None:
+                        old_c = torch.zeros_like(new_c)
+                    delta_sum += (new_c - old_c)
                     n += 1
             if n > 0:
                 self.global_control_fc[name] += delta_sum / n
@@ -385,9 +393,12 @@ class MultiTaskFederatedTrainer:
             delta_sum = torch.zeros_like(self.global_control_an[name])
             n = 0
             for cid in an_ids:
-                if cid in self.client_controls_an and cid in old_an_controls:
-                    delta_sum += (self.client_controls_an[cid][name]
-                                  - old_an_controls[cid][name])
+                if cid in self.client_controls_an:
+                    new_c = self.client_controls_an[cid][name]
+                    old_c = old_an_controls.get(cid, {}).get(name)
+                    if old_c is None:
+                        old_c = torch.zeros_like(new_c)
+                    delta_sum += (new_c - old_c)
                     n += 1
             if n > 0:
                 self.global_control_an[name] += delta_sum / n
