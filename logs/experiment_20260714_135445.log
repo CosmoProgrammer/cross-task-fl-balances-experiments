@@ -5,10 +5,6 @@
 [2026-07-14 13:54:45] INFO | experiment | STEP 2: MULTI-TASK FEDERATED LEARNING
 [2026-07-14 13:54:45] INFO | experiment |   Mode: dual | Strategy: scaffold
 [2026-07-14 13:54:45] INFO | experiment | ============================================================
-[FL-ASHRAE] 35 clients, 15 test buildings
-[FL-ASHRAE] 35 active clients, 85916 test windows
-[FL-LEAD] 35 clients, 15 test buildings
-[FL-LEAD] 35 active clients, 56934 val, 129708 test windows
 [2026-07-14 13:54:57] INFO | experiment | Forecasting model params: 884,999
 [2026-07-14 13:54:57] INFO | experiment | Anomaly model params:     976,623
 [2026-07-14 13:54:57] INFO | experiment | Shared backbone params:   829,790

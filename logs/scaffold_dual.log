@@ -1,0 +1,85 @@
+[2026-07-14 14:16:52] INFO | experiment | Device: cuda
+[2026-07-14 14:16:52] INFO | experiment | Cohort: 50 buildings/dataset (tag='(none)') | ashrae=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed | lead=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed
+[2026-07-14 14:16:52] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
+[2026-07-14 14:16:52] INFO | experiment | ============================================================
+[2026-07-14 14:16:52] INFO | experiment | STEP 2: MULTI-TASK FEDERATED LEARNING
+[2026-07-14 14:16:52] INFO | experiment |   Mode: dual | Strategy: scaffold
+[2026-07-14 14:16:52] INFO | experiment | ============================================================
+[FL-ASHRAE] 35 clients, 15 test buildings
+[FL-ASHRAE] 35 active clients, 85916 test windows
+[FL-LEAD] 35 clients, 15 test buildings
+[FL-LEAD] 35 active clients, 56934 val, 129708 test windows
+[2026-07-14 14:17:04] INFO | experiment | Forecasting model params: 884,999
+[2026-07-14 14:17:04] INFO | experiment | Anomaly model params:     976,623
+[2026-07-14 14:17:04] INFO | experiment | Shared backbone params:   829,790
+[2026-07-14 14:17:04] INFO | experiment | Forecasting head params:  55,209
+[2026-07-14 14:17:04] INFO | experiment | Anomaly head params:      146,833
+[2026-07-14 14:17:04] INFO | experiment | Single-GPU mode on cuda (available: 1, max: 1)
+[2026-07-14 14:17:04] INFO | experiment | Backbone compatibility verified.
+[2026-07-14 14:17:04] INFO | experiment | Multi-Task Federated Training
+[2026-07-14 14:17:04] INFO | experiment |   Mode: dual | Strategy: scaffold
+[2026-07-14 14:17:04] INFO | experiment |   Forecasting clients: 35
+[2026-07-14 14:17:04] INFO | experiment |   Anomaly clients:     35
+[2026-07-14 14:17:04] INFO | experiment |   Total clients:       70
+[2026-07-14 14:17:04] INFO | experiment |   Rounds: 10, Local epochs: 5
+[2026-07-14 14:17:04] INFO | experiment |   GPUs: 1
+[2026-07-14 14:17:04] INFO | experiment | SCAFFOLD control variates initialized.
+[2026-07-14 14:17:04] INFO | experiment | Round 1/10 | 70 clients
+[2026-07-14 14:26:52] INFO | experiment |   [forecasting] 35 clients trained on cuda in 588s
+[2026-07-14 14:38:37] INFO | experiment |   [anomaly] 35 clients trained on cuda in 705s
+[2026-07-14 14:38:38] INFO | experiment | Round 2/10 | 70 clients
+[2026-07-14 14:48:55] INFO | experiment |   [forecasting] 35 clients trained on cuda in 617s
+[2026-07-14 15:01:38] INFO | experiment |   [anomaly] 35 clients trained on cuda in 763s
+[2026-07-14 15:01:39] INFO | experiment | Round 3/10 | 70 clients
+[2026-07-14 15:12:19] INFO | experiment |   [forecasting] 35 clients trained on cuda in 640s
+[2026-07-14 15:24:09] INFO | experiment |   [anomaly] 35 clients trained on cuda in 710s
+[2026-07-14 15:24:09] INFO | experiment | Round 4/10 | 70 clients
+[2026-07-14 15:34:22] INFO | experiment |   [forecasting] 35 clients trained on cuda in 612s
+[2026-07-14 15:46:25] INFO | experiment |   [anomaly] 35 clients trained on cuda in 723s
+[2026-07-14 15:46:25] INFO | experiment | Round 5/10 | 70 clients
+[2026-07-14 15:57:31] INFO | experiment |   [forecasting] 35 clients trained on cuda in 666s
+[2026-07-14 16:09:25] INFO | experiment |   [anomaly] 35 clients trained on cuda in 713s
+[2026-07-14 16:10:14] INFO | experiment |   Forecast test MSE: 0.427975 | Anomaly test MSE: 0.460786 | round 1428s
+[2026-07-14 16:10:14] INFO | experiment | Round 6/10 | 70 clients
+[2026-07-14 16:20:43] INFO | experiment |   [forecasting] 35 clients trained on cuda in 629s
+[2026-07-14 16:33:53] INFO | experiment |   [anomaly] 35 clients trained on cuda in 790s
+[2026-07-14 16:33:54] INFO | experiment | Round 7/10 | 70 clients
+[2026-07-14 16:44:56] INFO | experiment |   [forecasting] 35 clients trained on cuda in 662s
+[2026-07-14 16:57:51] INFO | experiment |   [anomaly] 35 clients trained on cuda in 775s
+[2026-07-14 16:57:52] INFO | experiment | Round 8/10 | 70 clients
+[2026-07-14 17:08:07] INFO | experiment |   [forecasting] 35 clients trained on cuda in 615s
+[2026-07-14 17:19:57] INFO | experiment |   [anomaly] 35 clients trained on cuda in 711s
+[2026-07-14 17:19:58] INFO | experiment | Round 9/10 | 70 clients
+[2026-07-14 17:30:15] INFO | experiment |   [forecasting] 35 clients trained on cuda in 617s
+[2026-07-14 17:42:05] INFO | experiment |   [anomaly] 35 clients trained on cuda in 710s
+[2026-07-14 17:42:06] INFO | experiment | Round 10/10 | 70 clients
+[2026-07-14 17:52:18] INFO | experiment |   [forecasting] 35 clients trained on cuda in 613s
+[2026-07-14 18:04:10] INFO | experiment |   [anomaly] 35 clients trained on cuda in 711s
+[2026-07-14 18:04:57] INFO | experiment |   Forecast test MSE: 0.494829 | Anomaly test MSE: 0.503212 | round 1372s
+[2026-07-14 18:04:58] INFO | experiment | FL training completed in 13673.3s
+[2026-07-14 18:04:58] INFO | experiment | --- Federated Forecasting Evaluation ---
+[2026-07-14 18:05:16] INFO | experiment |   MSE: 0.494842
+[2026-07-14 18:05:16] INFO | experiment |   RMSE: 0.703450
+[2026-07-14 18:05:16] INFO | experiment |   MAE: 0.477831
+[2026-07-14 18:05:16] INFO | experiment |   MAPE: 80.21%
+[2026-07-14 18:05:16] INFO | experiment |   SMAPE: 22.584726
+[2026-07-14 18:05:16] INFO | experiment |   WAPE: 11.900839
+[2026-07-14 18:05:16] INFO | experiment |   NRMSE: 0.175201
+[2026-07-14 18:05:16] INFO | experiment |   MASE: 5.997391
+[2026-07-14 18:05:16] INFO | experiment |   RSE: 0.382388
+[2026-07-14 18:05:16] INFO | experiment |   CORR: 0.940802
+[2026-07-14 18:05:16] INFO | experiment |   R2: 0.853779
+[2026-07-14 18:05:16] INFO | experiment | --- Federated Anomaly Detection Evaluation ---
+[2026-07-14 18:05:29] INFO | experiment |   Threshold (from val): 0.384305
+[2026-07-14 18:05:57] INFO | experiment |   F1: 0.4655
+[2026-07-14 18:05:57] INFO | experiment |   AUC_ROC: 0.7305
+[2026-07-14 18:05:57] INFO | experiment |   AUC_PR: 0.5406
+[2026-07-14 18:05:57] INFO | experiment |   PRECISION: 0.4296
+[2026-07-14 18:05:57] INFO | experiment |   RECALL: 0.5079
+[2026-07-14 18:05:57] INFO | experiment | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/federated_dual_scaffold_results.json
+[2026-07-14 18:05:57] INFO | experiment | Models saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/checkpoints
+[2026-07-14 18:06:00] INFO | experiment | ============================================================
+[2026-07-14 18:06:00] INFO | experiment | STEP 6: GENERATING RESEARCH PAPER PLOTS
+[2026-07-14 18:06:00] INFO | experiment | ============================================================
+[2026-07-14 18:06:00] WARNING | experiment | Skipping plot generation (non-fatal): ModuleNotFoundError("No module named 'cycler'")
+[2026-07-14 18:06:00] INFO | experiment | [DONE] Experiment complete.

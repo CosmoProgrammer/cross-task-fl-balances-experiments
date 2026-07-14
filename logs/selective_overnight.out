@@ -226,3 +226,8 @@ ERROR conda.cli.main_run:execute(148): `conda run python main.py --federated --m
 [2026-07-01 04:51:27] INFO | experiment | STEP 6: GENERATING RESEARCH PAPER PLOTS
 [2026-07-01 04:51:27] INFO | experiment | ============================================================
 !! FAILED: B2 share encoders only seed 42 (continuing)
+--- git: committed (selective-sharing B2 (share encoders only) seed 42)
+--- git: pushed
+########## SELECTIVE SHARING COMPLETE ##########
+Laptop: git pull --ff-only; compare share-decoders-gates / share-encoders vs
+        dual (share-all) + single_task (share-none) anchors.
