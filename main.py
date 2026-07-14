@@ -643,8 +643,15 @@ def main():
                                              "comparison.json"), log)
 
     # -- Generate plots --
+    # Non-fatal: results are already saved above, so a missing plotting
+    # dependency (e.g. matplotlib/cycler absent in a GPU-server env) must not
+    # crash a completed run — it would return a non-zero exit and mislead
+    # runner scripts into thinking the experiment failed.
     if run_all or (fed_results or cent_results):
-        run_visualization(config, log)
+        try:
+            run_visualization(config, log)
+        except Exception as e:
+            log.warning(f"Skipping plot generation (non-fatal): {e!r}")
 
     log.info("[DONE] Experiment complete.")
 
