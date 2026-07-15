@@ -95,7 +95,10 @@ class ExperimentConfig:
 
     # ── FL aggregation mode and strategy ──
     aggregation_mode: str = "dual"    # "dual", "single_task", "local_only"
-    fl_strategy: str = "fedavg"       # "fedavg", "fedprox", "scaffold" (Scaffold is dropped now)
+    fl_strategy: str = "fedavg"       # "fedavg", "fedprox", "scaffold" (Option II),
+                                      # "scaffold_c1" (SCAFFOLD Option I: control = mean
+                                      # gradient recomputed at the global model; optimizer-
+                                      # agnostic, keeps AdamW — the 2026-07-14 fallback probe)
     fedprox_mu: float = 0.01          # proximal term weight for FedProx
     # Selective backbone sharing (dual mode only): which backbone MODULES are
     # cross-task-shared (averaged across ALL clients). Backbone modules NOT listed

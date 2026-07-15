@@ -496,9 +496,10 @@ def main():
                         default="dual",
                         help="FL aggregation mode (default: dual)")
     parser.add_argument("--strategy",
-                        choices=["fedavg", "fedprox", "scaffold"],
+                        choices=["fedavg", "fedprox", "scaffold", "scaffold_c1"],
                         default="fedavg",
-                        help="FL strategy (default: fedavg)")
+                        help="FL strategy (default: fedavg). scaffold=Option II, "
+                             "scaffold_c1=Option I (control recomputed at global model)")
     parser.add_argument("--cohort", type=int, default=ExperimentConfig.cohort_size,
                         help="Buildings per dataset (default 50; ladder 100/200/400). "
                              "Drives the processed-data dir AND the output tag, so "

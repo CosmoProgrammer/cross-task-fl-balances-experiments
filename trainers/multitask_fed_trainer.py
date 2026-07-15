@@ -63,6 +63,13 @@ class MultiTaskFederatedTrainer:
         self.aggregation_mode = getattr(config, 'aggregation_mode', 'dual')
         self.fl_strategy = getattr(config, 'fl_strategy', 'fedavg')
         self.fedprox_mu = getattr(config, 'fedprox_mu', 0.01)
+        # SCAFFOLD: two control-update variants share all machinery below.
+        #   "scaffold"    -> Option II: c_i+ = c_i - c + (x_global - x_trained)/(K*eta)
+        #                    (reuses the training deltas; scale-miscalibrated under AdamW)
+        #   "scaffold_c1" -> Option I:  c_i+ = mean grad f_i(x_global) (recomputed at the
+        #                    global model; optimizer-agnostic, clean under AdamW)
+        self.use_scaffold = self.fl_strategy in ("scaffold", "scaffold_c1")
+        self.scaffold_option = 1 if self.fl_strategy == "scaffold_c1" else 2
         # Selective backbone sharing (dual only): which backbone modules are
         # cross-task-shared. None => whole backbone == original dual. Backbone
         # params outside this set are aggregated within task group (task-private).
@@ -170,7 +177,7 @@ class MultiTaskFederatedTrainer:
                 loss.backward()
 
                 # SCAFFOLD: gradient correction  g_corrected = g - c_i + c
-                if self.fl_strategy == "scaffold" and global_control is not None:
+                if self.use_scaffold and global_control is not None:
                     for n, p in client_model.named_parameters():
                         if p.grad is not None and n in global_control:
                             p.grad.data.add_(
@@ -228,7 +235,7 @@ class MultiTaskFederatedTrainer:
                 loss.backward()
 
                 # SCAFFOLD: gradient correction
-                if self.fl_strategy == "scaffold" and global_control is not None:
+                if self.use_scaffold and global_control is not None:
                     for n, p in client_model.named_parameters():
                         if p.grad is not None and n in global_control:
                             p.grad.data.add_(
@@ -241,6 +248,66 @@ class MultiTaskFederatedTrainer:
                 n_batches += 1
 
         return client_model, total_loss / max(n_batches, 1)
+
+    # ── SCAFFOLD Option I: control = mean gradient at the global model ──
+
+    def _grad_at_params_forecasting(self, model, train_loader, target_device):
+        """SCAFFOLD Option I control: mean gradient of the forecasting loss over
+        the client's data, evaluated at the model's CURRENT (== global) params.
+        No optimizer step, no control correction. Returns {name: grad} on CPU.
+
+        `model` is the fresh global-model copy BEFORE local training moves it, so
+        this is grad f_i(x_global) — the optimizer-agnostic control variate. Only
+        the leftover .grad is touched (zeroed on exit); params are unchanged, so the
+        same object is trained afterwards.
+        """
+        model.train()
+        loss_fn = nn.MSELoss()
+        model.zero_grad(set_to_none=True)
+        n_batches = 0
+        for x, y in train_loader:
+            x = x.float().to(target_device, non_blocking=True)
+            y = y.float().to(target_device, non_blocking=True)
+            loss = loss_fn(model(x), y) + self._compute_aux_loss(model)
+            loss.backward()
+            n_batches += 1
+        denom = max(n_batches, 1)
+        grads = {n: (p.grad.detach().div(denom).cpu() if p.grad is not None
+                     else torch.zeros_like(p, device="cpu"))
+                 for n, p in model.named_parameters()}
+        model.zero_grad(set_to_none=True)
+        return grads
+
+    def _grad_at_params_anomaly(self, model, train_loader, target_device):
+        """SCAFFOLD Option I control for the anomaly (masked-reconstruct) loss —
+        mean gradient over the client's data at the model's current params.
+        Mirrors `_train_anomaly_client_on`'s loss (random mask, loss on masked
+        positions only). Returns {name: grad} on CPU.
+        """
+        model.train()
+        loss_fn = nn.MSELoss(reduction='none')
+        mask_rate = self.config.mask_rate
+        model.zero_grad(set_to_none=True)
+        n_batches = 0
+        for sequences, labels in train_loader:
+            sequences = sequences.float().to(target_device, non_blocking=True)
+            if sequences.dim() == 2:
+                sequences = sequences.unsqueeze(-1)
+            mask = (torch.rand_like(sequences) > mask_rate).float()
+            recon = model(sequences * mask, x_mask=mask)
+            per_elem = loss_fn(recon, sequences)
+            masked_pos = (mask == 0)
+            loss = (per_elem[masked_pos].mean() if masked_pos.any()
+                    else per_elem.mean())
+            loss = loss + self._compute_aux_loss(model)
+            loss.backward()
+            n_batches += 1
+        denom = max(n_batches, 1)
+        grads = {n: (p.grad.detach().div(denom).cpu() if p.grad is not None
+                     else torch.zeros_like(p, device="cpu"))
+                 for n, p in model.named_parameters()}
+        model.zero_grad(set_to_none=True)
+        return grads
 
     # ── Aggregation methods ──
 
@@ -465,11 +532,12 @@ class MultiTaskFederatedTrainer:
     def _train_all_clients_on_device(self, client_ids, client_loaders,
                                      global_model, train_fn, target_device,
                                      task="forecasting",
-                                     persistent_clients=None):
+                                     persistent_clients=None, grad_fn=None):
         """Train all clients in a group on a single device.
 
-        Handles all FL strategies (fedavg, fedprox, scaffold) and supports
-        local_only mode via persistent_clients dict.
+        Handles all FL strategies (fedavg, fedprox, scaffold, scaffold_c1) and
+        supports local_only mode via persistent_clients dict. `grad_fn` (the
+        task-matched gradient-at-global helper) is required for SCAFFOLD Option I.
         """
         group_start = time.time()
         models, weights = [], []
@@ -483,7 +551,7 @@ class MultiTaskFederatedTrainer:
         # SCAFFOLD: get global control and per-client controls dict
         global_control = None
         controls_dict = None
-        if self.fl_strategy == "scaffold":
+        if self.use_scaffold:
             gc = (self.global_control_fc if task == "forecasting"
                   else self.global_control_an)
             global_control = {n: v.to(target_device) for n, v in gc.items()}
@@ -507,13 +575,36 @@ class MultiTaskFederatedTrainer:
 
             # SCAFFOLD: get per-client control
             client_control = None
-            if self.fl_strategy == "scaffold":
+            if self.use_scaffold:
                 if cid not in controls_dict:
                     controls_dict[cid] = {
                         n: torch.zeros_like(p).cpu()
                         for n, p in global_model.named_parameters()}
                 client_control = {n: v.to(target_device)
                                   for n, v in controls_dict[cid].items()}
+
+            # SCAFFOLD Option I: recompute the control as the mean gradient at the
+            # global model, on `client` BEFORE it is trained (it currently == the
+            # global model). Params unchanged; only leftover .grad is touched.
+            option1_control = None
+            if self.use_scaffold and self.scaffold_option == 1:
+                if grad_fn is None:
+                    raise ValueError("SCAFFOLD Option I (scaffold_c1) requires a "
+                                     "grad_fn to be passed for task %r" % task)
+                # Isolate this extra pass from training's RNG stream (dropout, the
+                # anomaly mask via rand_like) by save/restoring generator state, so
+                # Option I diverges from FedAvg ONLY through the control variates,
+                # not through incidental RNG consumption — keeps the null test
+                # meaningful and the comparison to the fedavg anchor clean.
+                cpu_rng = torch.get_rng_state()
+                cuda_rng = None
+                dev_t = torch.device(target_device)
+                if dev_t.type == "cuda":
+                    cuda_rng = torch.cuda.get_rng_state(dev_t)
+                option1_control = grad_fn(client, cdata["train"], target_device)
+                torch.set_rng_state(cpu_rng)
+                if cuda_rng is not None:
+                    torch.cuda.set_rng_state(cuda_rng, dev_t)
 
             # Train client
             trained, loss = train_fn(
@@ -522,9 +613,12 @@ class MultiTaskFederatedTrainer:
                 global_control=global_control,
                 client_control=client_control)
 
-            # SCAFFOLD: update client control variate (Option II)
-            # c_i_new = c_i - c + (x_global - x_trained) / (K * eta)
-            if self.fl_strategy == "scaffold":
+            # SCAFFOLD: update client control variate
+            if self.use_scaffold and self.scaffold_option == 1:
+                # Option I: c_i+ = mean grad f_i(x_global) (already on CPU)
+                controls_dict[cid] = option1_control
+            elif self.use_scaffold:
+                # Option II: c_i+ = c_i - c + (x_global - x_trained) / (K * eta)
                 n_steps = self.config.local_epochs * len(cdata["train"])
                 lr = self.config.client_lr
                 new_control = {}
@@ -592,7 +686,7 @@ class MultiTaskFederatedTrainer:
             self.log.info("  FedProx mu: %.4f", self.fedprox_mu)
 
         # Initialize SCAFFOLD control variates
-        if self.fl_strategy == "scaffold":
+        if self.use_scaffold:
             self._init_scaffold()
 
         # Initialize persistent client models for local_only mode
@@ -608,7 +702,7 @@ class MultiTaskFederatedTrainer:
 
             # Snapshot SCAFFOLD controls for delta computation
             old_fc_controls, old_an_controls = {}, {}
-            if self.fl_strategy == "scaffold":
+            if self.use_scaffold:
                 old_fc_controls = {
                     cid: {n: v.clone() for n, v in
                           self.client_controls_fc[cid].items()}
@@ -630,7 +724,8 @@ class MultiTaskFederatedTrainer:
                         self._train_forecasting_client_on,
                         self.devices[0],
                         task="forecasting",
-                        persistent_clients=persistent_fc)
+                        persistent_clients=persistent_fc,
+                        grad_fn=self._grad_at_params_forecasting)
                     an_future = executor.submit(
                         self._train_all_clients_on_device,
                         an_ids, anomaly_client_loaders,
@@ -638,7 +733,8 @@ class MultiTaskFederatedTrainer:
                         self._train_anomaly_client_on,
                         self.devices[1],
                         task="anomaly",
-                        persistent_clients=persistent_an)
+                        persistent_clients=persistent_an,
+                        grad_fn=self._grad_at_params_anomaly)
 
                     forecast_models, forecast_weights = fc_future.result()
                     anomaly_models, anomaly_weights = an_future.result()
@@ -650,7 +746,8 @@ class MultiTaskFederatedTrainer:
                         self._train_forecasting_client_on,
                         self.device,
                         task="forecasting",
-                        persistent_clients=persistent_fc)
+                        persistent_clients=persistent_fc,
+                        grad_fn=self._grad_at_params_forecasting)
                 anomaly_models, anomaly_weights = \
                     self._train_all_clients_on_device(
                         an_ids, anomaly_client_loaders,
@@ -658,7 +755,8 @@ class MultiTaskFederatedTrainer:
                         self._train_anomaly_client_on,
                         self.device,
                         task="anomaly",
-                        persistent_clients=persistent_an)
+                        persistent_clients=persistent_an,
+                        grad_fn=self._grad_at_params_anomaly)
 
             # ── Aggregation ──
             if self.aggregation_mode == "dual":
@@ -672,7 +770,7 @@ class MultiTaskFederatedTrainer:
                                            anomaly_models, anomaly_weights)
 
             # Update SCAFFOLD global controls
-            if self.fl_strategy == "scaffold":
+            if self.use_scaffold:
                 self._update_scaffold_global_controls(
                     fc_ids, an_ids, old_fc_controls, old_an_controls)
 

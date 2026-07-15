@@ -94,7 +94,7 @@ def run_one(strategy, fc_init, an_init, num_rounds):
                   make_test_loader("fc", 30), make_test_loader("an", 40))
 
     controls = None
-    if strategy == "scaffold":
+    if strategy in ("scaffold", "scaffold_c1"):
         controls = {
             "global_fc": trainer.global_control_fc,
             "client_fc": trainer.client_controls_fc,
@@ -182,12 +182,69 @@ def main():
     print(f"    max|Δ| = {d2:.3e}  => "
           f"{'PASS (scaffold is live)' if d2 > 0 else 'FAIL (scaffold is dead)'}")
 
+    # ====================================================================
+    # OPTION I (strategy "scaffold_c1"): control = mean grad at global model
+    # ====================================================================
+    print("\n" + "=" * 70)
+    print("OPTION I  (scaffold_c1)  — control recomputed at the global model")
+    print("=" * 70)
+
+    # NULL TEST: round-1 controls are 0 -> correction is a no-op -> byte-identical
+    # to fedavg (same as Option II; only the END-of-round control UPDATE differs).
+    c1_fc, c1_an, c1_ctrl = run_one("scaffold_c1", fc_init, an_init, num_rounds=1)
+    d1_fc = max_abs_diff(fa_fc, c1_fc)
+    d1_an = max_abs_diff(fa_an, c1_an)
+    print(f"\n[NULL TEST]  round-1 scaffold_c1 vs fedavg  (expect 0.0)")
+    print(f"    forecasting max|Δ| = {d1_fc:.3e}")
+    print(f"    anomaly     max|Δ| = {d1_an:.3e}")
+    c1_null_ok = (d1_fc == 0.0 and d1_an == 0.0)
+    print(f"    => {'PASS' if c1_null_ok else 'FAIL'}")
+
+    # Control update LIVE and FINITE (mean grad at global should be non-zero).
+    c1_cmax = max(
+        max(v.abs().max().item() for v in cdict.values())
+        for cdict in c1_ctrl["client_fc"].values()
+    )
+    c1_finite = all(
+        torch.isfinite(v).all().item()
+        for cdict in c1_ctrl["client_fc"].values() for v in cdict.values()
+    )
+    print(f"\n[UPDATE]  after round 1: max|client_control_fc| = {c1_cmax:.3e}  "
+          f"(mean grad at global)")
+    print(f"    control non-zero = {c1_cmax > 0}; all finite = {c1_finite}")
+
+    # INVARIANT c == mean(c_i) must still hold under Option I's global update.
+    c1_client_dicts = list(c1_ctrl["client_fc"].values())
+    c1_inv_err = 0.0
+    for name in c1_ctrl["global_fc"]:
+        mean_ci = sum(cd[name] for cd in c1_client_dicts) / len(c1_client_dicts)
+        c1_inv_err = max(c1_inv_err,
+                         (c1_ctrl["global_fc"][name] - mean_ci).abs().max().item())
+    c1_inv_ok = c1_inv_err < 1e-6
+    print(f"    INVARIANT  max|c - mean(c_i)| = {c1_inv_err:.3e}  => "
+          f"{'PASS' if c1_inv_ok else 'FAIL <-- BUG'}")
+
+    # LIVENESS: round-2 must diverge from fedavg (controls now active), and it
+    # must ALSO differ from Option II (different control -> different trajectory).
+    c1_2_fc, c1_2_an, _ = run_one("scaffold_c1", fc_init, an_init, num_rounds=2)
+    c1_d2 = max(max_abs_diff(fa2_fc, c1_2_fc), max_abs_diff(fa2_an, c1_2_an))
+    c1_vs_c2 = max(max_abs_diff(sc2_fc, c1_2_fc), max_abs_diff(sc2_an, c1_2_an))
+    print(f"\n[LIVENESS]  round-2 scaffold_c1 vs fedavg    max|Δ| = {c1_d2:.3e}  => "
+          f"{'PASS' if c1_d2 > 0 else 'FAIL (dead)'}")
+    print(f"[DISTINCT]  round-2 scaffold_c1 vs Option II  max|Δ| = {c1_vs_c2:.3e}  => "
+          f"{'PASS (Option I != Option II)' if c1_vs_c2 > 0 else 'FAIL (identical)'}")
+
     print("\n" + "=" * 70)
     print("SUMMARY")
-    print(f"  null test (correction injection correct) : {'PASS' if null_ok else 'FAIL'}")
-    print(f"  client control update live               : {'PASS' if cmax > 0 else 'FAIL'}")
-    print(f"  scaffold diverges from fedavg (liveness) : {'PASS' if d2 > 0 else 'FAIL'}")
-    print(f"  global control == mean(client controls)  : {'PASS' if inv_ok else 'FAIL <-- BUG'}")
+    print(f"  [II ] null test (correction injection correct) : {'PASS' if null_ok else 'FAIL'}")
+    print(f"  [II ] client control update live               : {'PASS' if cmax > 0 else 'FAIL'}")
+    print(f"  [II ] scaffold diverges from fedavg (liveness) : {'PASS' if d2 > 0 else 'FAIL'}")
+    print(f"  [II ] global control == mean(client controls)  : {'PASS' if inv_ok else 'FAIL <-- BUG'}")
+    print(f"  [I  ] null test (round-1 == fedavg)            : {'PASS' if c1_null_ok else 'FAIL'}")
+    print(f"  [I  ] control live + finite                    : {'PASS' if (c1_cmax > 0 and c1_finite) else 'FAIL'}")
+    print(f"  [I  ] global control == mean(client controls)  : {'PASS' if c1_inv_ok else 'FAIL <-- BUG'}")
+    print(f"  [I  ] diverges from fedavg (liveness)          : {'PASS' if c1_d2 > 0 else 'FAIL'}")
+    print(f"  [I  ] distinct from Option II                  : {'PASS' if c1_vs_c2 > 0 else 'FAIL'}")
     print("=" * 70)
 
 
