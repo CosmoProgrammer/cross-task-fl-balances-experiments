@@ -40,9 +40,15 @@
 #
 # Usage (from repo root, inside tmux/nohup so it survives disconnect):
 #   PYTHON="conda run -n yuv_fl python" bash run_scaffold_option1.sh
+#   GPUS="0"   PYTHON="conda run -n yuv_fl python" bash run_scaffold_option1.sh  # ONE GPU (serial)
 #   SEEDS="42 43 44 45 46 47" PYTHON="conda run -n yuv_fl python" bash run_scaffold_option1.sh
 #   GPUS="0,1" NOPUSH=1 ... bash run_scaffold_option1.sh      # commit but don't push
 #   NOGIT=1 ... bash run_scaffold_option1.sh                  # no git at all
+#
+# GPU LAYOUT: GPUS="0,1" (default) runs dual ‖ single as a process-parallel pair,
+# one per GPU. GPUS="0" (or "1") runs them SERIALLY on that single GPU — use this
+# when the other GPU is busy with another user (avoids OOM from two runs on one
+# card). Serial ~= 2x wall-clock of the parallel pair.
 #
 # Env knobs: SEEDS (default "42"), GPUS (default "0,1"), PYTHON (default python),
 #            COHORT (default 50), ROUNDS (default 10), EVAL_EVERY (default 1 —
@@ -108,9 +114,21 @@ commit_push () {  # $1 = message
     else echo "!! git push failed (commits queued; next push catches up)"; fi
 }
 
-# ---- run parallel arrays Q_OUT / Q_LABEL / Q_CMD two-at-a-time across both GPUs ---
+# ---- run arrays Q_OUT / Q_LABEL / Q_CMD across the available GPU(s) --------------
+# Two distinct GPUs => process-parallel PAIRS (one condition pinned per GPU).
+# One GPU (GPU_B empty or == GPU_A, e.g. GPUS="0") => SERIAL, one condition at a
+# time on GPU_A (avoids cramming two 70-client runs onto one GPU / OOM).
 run_queue () {
     local n=${#Q_OUT[@]} i=0
+    if [[ -z "$GPU_B" || "$GPU_B" == "$GPU_A" ]]; then
+        while (( i < n )); do
+            launch_if_needed "$GPU_A" "${Q_OUT[$i]}" "${Q_LABEL[$i]}" "${Q_CMD[$i]}"
+            wait_one "$LAUNCHED_PID" "${Q_LABEL[$i]}"
+            commit_push "scaffold Option I (scaffold_c1): ${Q_LABEL[$i]} done"
+            i=$((i + 1))
+        done
+        return 0
+    fi
     while (( i < n )); do
         launch_if_needed "$GPU_A" "${Q_OUT[$i]}" "${Q_LABEL[$i]}" "${Q_CMD[$i]}"
         local pa=$LAUNCHED_PID la="${Q_LABEL[$i]}" pb="" lb=""
