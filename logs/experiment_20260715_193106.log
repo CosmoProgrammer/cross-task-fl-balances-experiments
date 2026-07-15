@@ -1,0 +1,64 @@
+[2026-07-15 19:31:06] INFO | experiment | Device: cuda
+[2026-07-15 19:31:06] INFO | experiment | Cohort: 50 buildings/dataset (tag='(none)') | ashrae=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed | lead=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed
+[2026-07-15 19:31:06] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
+[2026-07-15 19:31:06] INFO | experiment | ============================================================
+[2026-07-15 19:31:06] INFO | experiment | STEP 2: MULTI-TASK FEDERATED LEARNING
+[2026-07-15 19:31:06] INFO | experiment |   Mode: single_task | Strategy: scaffold_c1
+[2026-07-15 19:31:06] INFO | experiment | ============================================================
+[2026-07-15 19:31:20] INFO | experiment | Forecasting model params: 884,999
+[2026-07-15 19:31:20] INFO | experiment | Anomaly model params:     976,623
+[2026-07-15 19:31:20] INFO | experiment | Shared backbone params:   829,790
+[2026-07-15 19:31:20] INFO | experiment | Forecasting head params:  55,209
+[2026-07-15 19:31:20] INFO | experiment | Anomaly head params:      146,833
+[2026-07-15 19:31:20] INFO | experiment | Single-GPU mode on cuda (available: 1, max: 1)
+[2026-07-15 19:31:20] INFO | experiment | Backbone compatibility verified.
+[2026-07-15 19:31:20] INFO | experiment | Multi-Task Federated Training
+[2026-07-15 19:31:20] INFO | experiment |   Mode: single_task | Strategy: scaffold_c1
+[2026-07-15 19:31:20] INFO | experiment |   Forecasting clients: 35
+[2026-07-15 19:31:20] INFO | experiment |   Anomaly clients:     35
+[2026-07-15 19:31:20] INFO | experiment |   Total clients:       70
+[2026-07-15 19:31:20] INFO | experiment |   Rounds: 10, Local epochs: 5
+[2026-07-15 19:31:20] INFO | experiment |   GPUs: 1
+[2026-07-15 19:31:20] INFO | experiment | SCAFFOLD control variates initialized.
+[2026-07-15 19:31:20] INFO | experiment | Round 1/10 | 70 clients
+[2026-07-15 19:44:48] INFO | experiment |   [forecasting] 35 clients trained on cuda in 808s
+[2026-07-15 20:00:54] INFO | experiment |   [anomaly] 35 clients trained on cuda in 966s
+[2026-07-15 20:01:52] INFO | experiment |   Forecast test MSE: 0.235436 | Anomaly test MSE: 0.209163 | round 1831s
+[2026-07-15 20:01:52] INFO | experiment | Round 2/10 | 70 clients
+[2026-07-15 20:15:06] INFO | experiment |   [forecasting] 35 clients trained on cuda in 795s
+[2026-07-15 20:29:43] INFO | experiment |   [anomaly] 35 clients trained on cuda in 877s
+[2026-07-15 20:30:36] INFO | experiment |   Forecast test MSE: 19.341396 | Anomaly test MSE: 0.656048 | round 1724s
+[2026-07-15 20:30:36] INFO | experiment | Round 3/10 | 70 clients
+[2026-07-15 20:42:59] INFO | experiment |   [forecasting] 35 clients trained on cuda in 743s
+[2026-07-15 20:56:41] INFO | experiment |   [anomaly] 35 clients trained on cuda in 822s
+[2026-07-15 20:57:31] INFO | experiment |   Forecast test MSE: 0.638342 | Anomaly test MSE: 31.907546 | round 1615s
+[2026-07-15 20:57:31] INFO | experiment | Round 4/10 | 70 clients
+[2026-07-15 21:09:10] INFO | experiment |   [forecasting] 35 clients trained on cuda in 699s
+[2026-07-15 21:22:46] INFO | experiment |   [anomaly] 35 clients trained on cuda in 816s
+[2026-07-15 21:23:35] INFO | experiment |   Forecast test MSE: 6380778.454140 | Anomaly test MSE: nan | round 1564s
+[2026-07-15 21:23:35] INFO | experiment | Round 5/10 | 70 clients
+[2026-07-15 21:35:10] INFO | experiment |   [forecasting] 35 clients trained on cuda in 696s
+[2026-07-15 21:48:40] INFO | experiment |   [anomaly] 35 clients trained on cuda in 810s
+[2026-07-15 21:49:30] INFO | experiment |   Forecast test MSE: 11.225847 | Anomaly test MSE: nan | round 1555s
+[2026-07-15 21:49:30] INFO | experiment | Round 6/10 | 70 clients
+[2026-07-15 22:01:07] INFO | experiment |   [forecasting] 35 clients trained on cuda in 697s
+[2026-07-15 22:14:34] INFO | experiment |   [anomaly] 35 clients trained on cuda in 806s
+[2026-07-15 22:15:23] INFO | experiment |   Forecast test MSE: nan | Anomaly test MSE: nan | round 1552s
+[2026-07-15 22:15:23] INFO | experiment | Round 7/10 | 70 clients
+[2026-07-15 22:26:43] INFO | experiment |   [forecasting] 35 clients trained on cuda in 680s
+[2026-07-15 22:40:11] INFO | experiment |   [anomaly] 35 clients trained on cuda in 807s
+[2026-07-15 22:40:59] INFO | experiment |   Forecast test MSE: nan | Anomaly test MSE: nan | round 1537s
+[2026-07-15 22:41:00] INFO | experiment | Round 8/10 | 70 clients
+[2026-07-15 22:52:20] INFO | experiment |   [forecasting] 35 clients trained on cuda in 681s
+[2026-07-15 23:05:36] INFO | experiment |   [anomaly] 35 clients trained on cuda in 796s
+[2026-07-15 23:06:26] INFO | experiment |   Forecast test MSE: nan | Anomaly test MSE: nan | round 1526s
+[2026-07-15 23:06:26] INFO | experiment | Round 9/10 | 70 clients
+[2026-07-15 23:17:57] INFO | experiment |   [forecasting] 35 clients trained on cuda in 691s
+[2026-07-15 23:31:19] INFO | experiment |   [anomaly] 35 clients trained on cuda in 802s
+[2026-07-15 23:32:07] INFO | experiment |   Forecast test MSE: nan | Anomaly test MSE: nan | round 1541s
+[2026-07-15 23:32:07] INFO | experiment | Round 10/10 | 70 clients
+[2026-07-15 23:43:34] INFO | experiment |   [forecasting] 35 clients trained on cuda in 687s
+[2026-07-15 23:56:47] INFO | experiment |   [anomaly] 35 clients trained on cuda in 792s
+[2026-07-15 23:57:36] INFO | experiment |   Forecast test MSE: nan | Anomaly test MSE: nan | round 1528s
+[2026-07-15 23:57:36] INFO | experiment | FL training completed in 15975.8s
+[2026-07-15 23:57:36] INFO | experiment | --- Federated Forecasting Evaluation ---
