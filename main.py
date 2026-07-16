@@ -46,11 +46,14 @@ from data_provider.ashrae_dataset import (
     get_ashrae_fl_data, get_ashrae_centralized_loaders)
 from data_provider.lead_dataset import (
     get_lead_fl_data, get_lead_centralized_loaders)
+from data_provider.imputation_dataset import (
+    get_imputation_fl_data, get_imputation_centralized_loaders)
 from trainers.multitask_fed_trainer import MultiTaskFederatedTrainer
 from trainers.centralized_trainer import CentralizedTrainer
 from utils.metrics import (
     compute_forecasting_metrics, compute_per_horizon_metrics,
-    compute_anomaly_metrics, find_threshold_on_validation)
+    compute_anomaly_metrics, compute_imputation_metrics,
+    find_threshold_on_validation)
 from utils.logging_utils import setup_logger, CSVMetricsLogger
 
 
@@ -76,6 +79,22 @@ def build_forecasting_model(config):
 
 def build_anomaly_model(config):
     """MambaMixer for anomaly (reconstruction): out_len=seq_len=128."""
+    return MambaMixer(
+        in_len=config.seq_len, out_len=config.seq_len,
+        in_chn=config.in_chn, ex_chn=config.ex_chn, out_chn=config.out_chn,
+        patch_sizes=config.patch_sizes, hid_len=config.hid_len,
+        hid_chn=config.hid_chn, hid_pch=config.hid_pch,
+        hid_pred=config.hid_pred, d_ssm=config.d_ssm,
+        state_size=config.state_size, expand=config.expand,
+        conv_kernel=config.conv_kernel, last_norm=config.last_norm,
+        drop=config.drop,
+    )
+
+
+def build_imputation_model(config):
+    """MambaMixer for imputation (masked reconstruction): out_len=seq_len=128.
+    Same architecture/shape as the anomaly model — imputation reuses the
+    mask-and-reconstruct machinery on a disjoint ASHRAE cohort."""
     return MambaMixer(
         in_len=config.seq_len, out_len=config.seq_len,
         in_chn=config.in_chn, ex_chn=config.ex_chn, out_chn=config.out_chn,
@@ -254,6 +273,177 @@ def run_federated(config, device, log):
                             f"{ckpt_prefix}_anomaly_model.pt"))
     log.info("Models saved to %s", config.checkpoint_dir)
 
+    return results
+
+
+# =====================================================================
+#  2b. MULTI-TASK FEDERATED LEARNING (generic --tasks path)
+# =====================================================================
+
+# Task registry for the generic --tasks path. Tokens map to (model builder,
+# FL data loaders, training kind, csv key). fc+an reproduces the legacy anchors.
+_TASK_META = {
+    "fc":  {"name": "forecasting", "csv_key": "forecast",   "kind": "forecast"},
+    "an":  {"name": "anomaly",     "csv_key": "anomaly",     "kind": "reconstruct"},
+    "imp": {"name": "imputation",  "csv_key": "imputation",  "kind": "reconstruct"},
+}
+
+
+def _build_task_spec(token, config, log):
+    """Build a _TaskSpec (model + FL loaders) for a task token in {fc,an,imp}.
+
+    Model is built BEFORE the loaders (loaders consume no torch RNG at
+    construction), so building tasks in a fixed token order keeps model-init RNG
+    consumption identical to the legacy 2-task path — the fc+an subset stays
+    byte-comparable to the committed anchors."""
+    from trainers.multitask_fed_trainer import _TaskSpec
+    meta = _TASK_META[token]
+    if token == "fc":
+        model = build_forecasting_model(config)
+        client_loaders, test_loader = get_ashrae_fl_data(
+            config.ashrae_processed_dir, config.seq_len, config.pred_len,
+            config.batch_size, num_workers=config.num_workers)
+        val_loader = None
+    elif token == "an":
+        model = build_anomaly_model(config)
+        client_loaders, val_loader, test_loader = get_lead_fl_data(
+            config.lead_processed_dir, config.seq_len, config.batch_size,
+            clean_only=config.clean_only, num_workers=config.num_workers)
+    elif token == "imp":
+        model = build_imputation_model(config)
+        client_loaders, val_loader, test_loader = get_imputation_fl_data(
+            config.imputation_processed_dir, config.seq_len, config.batch_size,
+            num_workers=config.num_workers)
+    else:
+        raise ValueError(f"unknown task token {token!r}")
+    return _TaskSpec(meta["name"], meta["csv_key"], model, meta["kind"],
+                     client_loaders=client_loaders, test_loader=test_loader,
+                     val_loader=val_loader)
+
+
+def run_federated_multitask(config, device, log, task_tokens):
+    """Generic federated run over an arbitrary subset of {fc, an, imp}.
+
+    Used for the imputation experiments (dual(AD+IMP), dual(FC+IMP), the triple,
+    and the single_task/local_only arms). Outputs are tagged `_tasks-<tokens>`
+    so they never clobber the 2-task FC+AD anchors."""
+    mode = config.aggregation_mode
+    strategy = config.fl_strategy
+    tokens = list(task_tokens)
+    subset_tag = "_tasks-" + "-".join(tokens)
+
+    log.info("=" * 60)
+    log.info("STEP 2b: MULTI-TASK FEDERATED LEARNING (generic)")
+    log.info("  Tasks: %s | Mode: %s | Strategy: %s", tokens, mode, strategy)
+    log.info("=" * 60)
+
+    specs = [_build_task_spec(tok, config, log) for tok in tokens]
+    aux_fn = build_aux_loss(config)
+
+    # Parameter accounting (backbone shared across all tasks)
+    ref_model = specs[0].model
+    backbone_params = sum(p.numel() for n, p in ref_model.named_parameters()
+                          if MambaMixer.is_backbone_param(n))
+    for spec in specs:
+        tot = sum(p.numel() for p in spec.model.parameters())
+        log.info("  %-12s params: %s (head %s)", spec.name, f"{tot:,}",
+                 f"{tot - backbone_params:,}")
+    log.info("  Shared backbone params: %s", f"{backbone_params:,}")
+
+    # CSV logger with per-task columns
+    cols = (["round"]
+            + [f"{_TASK_META[t]['csv_key']}_test_mse" for t in tokens]
+            + ["round_seconds"])
+    csv_name = (f"federated_{mode}_{strategy}{subset_tag}"
+                f"{config.cohort_tag}_rounds.csv")
+    csv_logger = CSVMetricsLogger(os.path.join(config.log_dir, csv_name), cols)
+
+    trainer = MultiTaskFederatedTrainer.from_tasks(
+        specs, device, config, aux_loss_fn=aux_fn, logger=log,
+        csv_logger=csv_logger)
+
+    start_time = time.time()
+    history = trainer.train_tasks()
+    elapsed = time.time() - start_time
+    log.info("FL training completed in %.1fs", elapsed)
+    csv_logger.close()
+
+    # ── Per-task final evaluation ──
+    task_results = {}
+    for tok, spec in zip(tokens, specs):
+        if spec.name == "forecasting":
+            log.info("--- Forecasting Evaluation ---")
+            preds, targets = trainer.evaluate_forecasting(
+                spec.test_loader, model=spec.model)
+            m = compute_forecasting_metrics(targets, preds)
+            ph = compute_per_horizon_metrics(targets, preds)
+            for k in ["mse", "rmse", "mae", "wape", "r2"]:
+                log.info("  %s: %.6f", k.upper(), m[k])
+            task_results[spec.name] = {"type": "forecasting",
+                                       "metrics": m, "per_horizon": ph}
+        elif spec.name == "anomaly":
+            log.info("--- Anomaly Detection Evaluation ---")
+            val_scores, val_labels = trainer.evaluate_anomaly_detection(
+                spec.val_loader, model=spec.model)
+            thr = find_threshold_on_validation(val_scores, val_labels)
+            test_scores, test_labels = trainer.evaluate_anomaly_detection(
+                spec.test_loader, model=spec.model)
+            m = compute_anomaly_metrics(test_labels, test_scores, thr)
+            for k in ["f1", "auc_roc", "auc_pr", "precision", "recall"]:
+                log.info("  %s: %.4f", k.upper(), m[k])
+            task_results[spec.name] = {"type": "anomaly", "metrics": m}
+        elif spec.name == "imputation":
+            log.info("--- Imputation Evaluation ---")
+            by_pattern = {}
+            for pattern in ("random", "block"):
+                tr, pr = trainer.evaluate_imputation(
+                    spec.test_loader, model=spec.model,
+                    mask_pattern=pattern, seed=1234)
+                by_pattern[pattern] = compute_imputation_metrics(tr, pr)
+                log.info("  [%s] MSE %.6f | MAE %.6f | WAPE %.2f | n=%d",
+                         pattern, by_pattern[pattern]["mse"],
+                         by_pattern[pattern]["mae"], by_pattern[pattern]["wape"],
+                         by_pattern[pattern]["n_masked"])
+            task_results[spec.name] = {
+                "type": "imputation",
+                "mask_rate": config.mask_rate,
+                "metrics": by_pattern["random"],       # primary (random point)
+                "metrics_block": by_pattern["block"],  # robustness (block mask)
+            }
+
+    results = {
+        "experiment": "multi_task_federated_generic",
+        "tasks": tokens,
+        "aggregation_mode": mode,
+        "fl_strategy": strategy,
+        "cohort_size": config.cohort_size,
+        "config": {
+            "cohort_size": config.cohort_size,
+            "num_rounds": config.num_rounds,
+            "local_epochs": config.local_epochs,
+            "n_clients": {s.name: len(s.client_loaders) for s in specs},
+            "seq_len": config.seq_len,
+            "pred_len": config.pred_len,
+            "mask_rate": config.mask_rate,
+            "fedprox_mu": config.fedprox_mu if strategy == "fedprox" else None,
+        },
+        "model_params": {"shared_backbone": backbone_params},
+        "task_results": task_results,
+        "history": history,
+        "training_time_seconds": elapsed,
+    }
+    result_file = (f"federated_{mode}_{strategy}{subset_tag}"
+                   f"{config.cohort_tag}_results.json")
+    save_results(results, os.path.join(config.results_dir, result_file), log)
+
+    # Save each task's global model
+    os.makedirs(config.checkpoint_dir, exist_ok=True)
+    ckpt_prefix = f"fed_{mode}_{strategy}{subset_tag}{config.cohort_tag}"
+    for spec in specs:
+        torch.save(spec.model.state_dict(),
+                   os.path.join(config.checkpoint_dir,
+                                f"{ckpt_prefix}_{spec.name}_model.pt"))
+    log.info("Models saved to %s", config.checkpoint_dir)
     return results
 
 
@@ -500,6 +690,14 @@ def main():
                         default="fedavg",
                         help="FL strategy (default: fedavg). scaffold=Option II, "
                              "scaffold_c1=Option I (control recomputed at global model)")
+    parser.add_argument("--tasks", default=None,
+                        help="Generic multi-task federated run over a SUBSET of "
+                             "{fc,an,imp} (comma list, e.g. `--tasks an,imp` or "
+                             "`--tasks fc,imp` or `--tasks fc,an,imp`). Uses the "
+                             "task-registry trainer; outputs tag `_tasks-<tokens>` "
+                             "so they never clobber the 2-task FC+AD anchors. "
+                             "Respects --mode/--strategy/--cohort/--seed. Omit for "
+                             "the legacy FC+AD run.")
     parser.add_argument("--cohort", type=int, default=ExperimentConfig.cohort_size,
                         help="Buildings per dataset (default 50; ladder 100/200/400). "
                              "Drives the processed-data dir AND the output tag, so "
@@ -620,6 +818,29 @@ def main():
     if args.baselines:
         run_baselines(config, device, log)
         log.info("[DONE] Baselines complete.")
+        return
+
+    # -- Generic multi-task federated run (--tasks) --
+    if args.tasks:
+        tokens = [t.strip() for t in args.tasks.split(",") if t.strip()]
+        bad = [t for t in tokens if t not in _TASK_META]
+        if bad:
+            parser.error(f"--tasks: unknown {bad}; choose from {list(_TASK_META)}")
+        if len(tokens) != len(set(tokens)):
+            parser.error(f"--tasks: duplicate tokens in {tokens}")
+        # Data-existence check per task (imputation needs `preprocess.py --imputation`).
+        _dir_for = {"fc": config.ashrae_processed_dir,
+                    "an": config.lead_processed_dir,
+                    "imp": config.imputation_processed_dir}
+        for tok in tokens:
+            meta = os.path.join(_dir_for[tok], "split_metadata.json")
+            if not os.path.exists(meta):
+                log.error("%s not found for task '%s'. Run preprocessing first "
+                          "(imputation: `python preprocess.py --imputation "
+                          "--skip-base`).", meta, tok)
+                sys.exit(1)
+        run_federated_multitask(config, device, log, tokens)
+        log.info("[DONE] Multi-task federated run complete.")
         return
 
     # -- Federated --

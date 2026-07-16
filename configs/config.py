@@ -29,6 +29,9 @@ class ExperimentConfig:
     # Processed data paths (pre-processed data lives here)
     ashrae_processed_dir: str = os.path.join(DATA_DIR, "ashrae", "processed")
     lead_processed_dir: str = os.path.join(DATA_DIR, "lead", "processed")
+    # Imputation task = a THIRD, disjoint ASHRAE cohort (built by
+    # `preprocess.py --imputation`). Empty until that group exists.
+    imputation_processed_dir: str = os.path.join(DATA_DIR, "imputation", "processed")
 
     # ── Building cohort ──
     # cohort_size is the REAL knob (drives preprocess.py: `python preprocess.py
@@ -152,6 +155,8 @@ class ExperimentConfig:
                 DATA_DIR, "ashrae", f"processed_c{self.cohort_size}")
             self.lead_processed_dir = os.path.join(
                 DATA_DIR, "lead", f"processed_c{self.cohort_size}")
+            self.imputation_processed_dir = os.path.join(
+                DATA_DIR, "imputation", f"processed_c{self.cohort_size}")
         # Keep the descriptive counts honest (fixed-15-test, nested design).
         self.n_total_ashrae = self.n_total_lead = self.cohort_size
         self.n_forecast_train = self.n_anomaly_train = self.cohort_size - 15

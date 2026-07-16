@@ -128,6 +128,36 @@ def _corr(y_true, y_pred, eps=1e-8):
     return float(np.sum(yt * yp) / denom)
 
 
+# ── Imputation Metrics ──
+
+def compute_imputation_metrics(y_true, y_pred):
+    """Error metrics for masked-value imputation.
+
+    Inputs are the values at MASKED positions only (gathered by the eval loop):
+    flat arrays of the ground-truth and reconstructed values. Mirrors the
+    forecasting scale-free set (WAPE/NRMSE) so imputation error is comparable
+    across buildings and mask rates. Reconstruction happens in log1p space (same
+    as the other tasks), so these are log-space errors.
+    """
+    y_true = np.asarray(y_true).flatten()
+    y_pred = np.asarray(y_pred).flatten()
+    if y_true.size == 0:
+        return {"mse": 0.0, "rmse": 0.0, "mae": 0.0, "wape": 0.0,
+                "nrmse": 0.0, "n_masked": 0}
+    mse_val = float(mean_squared_error(y_true, y_pred))
+    rmse_val = float(np.sqrt(mse_val))
+    mae_val = float(mean_absolute_error(y_true, y_pred))
+    denom = float(np.mean(np.abs(y_true)))
+    return {
+        "mse": mse_val,
+        "rmse": rmse_val,
+        "mae": mae_val,
+        "wape": float(_wape(y_true, y_pred)),
+        "nrmse": float(rmse_val / denom) if denom > 0 else 0.0,
+        "n_masked": int(y_true.size),
+    }
+
+
 # ── Anomaly Detection Metrics ──
 
 def find_threshold_on_validation(val_scores, val_labels):

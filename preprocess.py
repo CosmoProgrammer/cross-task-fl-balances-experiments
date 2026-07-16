@@ -79,13 +79,14 @@ def select_buildings(available, n_select, sel_seed, split_seed):
     return selected, train_bids, test_bids
 
 
-def preprocess_ashrae(cohort_size=BASE_COHORT):
-    """Clean ASHRAE, select `cohort_size` buildings (nested + fixed 15 test),
-    temporal-split, log1p, save."""
-    out_dir = processed_dir("ashrae", cohort_size)
-    os.makedirs(out_dir, exist_ok=True)
+def _clean_ashrae_df():
+    """Load + clean the raw ASHRAE CSV (steps 1-4), returning (df, available).
 
-    print(f"[ASHRAE] cohort_size={cohort_size} -> {out_dir}")
+    This is the cleaning shared by the forecasting AND imputation tasks (both use
+    ASHRAE). `df` is post-filtering but PRE-selection / pre-ffill / pre-log1p, so
+    each caller filters to its own buildings and applies the ffill+log1p tail via
+    `_finalize_ashrae`. Extracted verbatim from the original preprocess_ashrae so
+    the committed forecasting split stays byte-identical."""
     print("[ASHRAE] Loading raw CSV ...")
     df = pd.read_csv(ASHRAE_RAW, parse_dates=["timestamp"])
     print(f"  Raw rows: {len(df):,}")
@@ -116,16 +117,16 @@ def preprocess_ashrae(cohort_size=BASE_COHORT):
 
     available = sorted(df["building_id"].unique().tolist())
     print(f"  Available buildings after cleaning: {len(available)}")
+    return df, available
 
-    if len(available) < cohort_size:
-        print(f"  WARNING: Only {len(available)} buildings available, "
-              f"need {cohort_size}. Using all.")
 
-    # Nested cohort selection + FIXED test set (seeds SEED / SEED+1 as before).
-    selected, train_bids, test_bids = select_buildings(
-        available, cohort_size, sel_seed=SEED, split_seed=SEED + 1)
-    print(f"  Selected {len(selected)} buildings")
+def _finalize_ashrae(df, selected, train_bids, test_bids, out_dir, csv_name,
+                     cohort_size, extra_meta=None):
+    """ffill+log1p + temporal split + save (ASHRAE-format data).
 
+    Shared tail for the forecasting and imputation ASHRAE tasks. Reproduces the
+    original preprocess_ashrae steps 5-9 exactly, so the forecasting output is
+    byte-identical to before the refactor."""
     # Filter to selected buildings only
     df = df[df["building_id"].isin(selected)].reset_index(drop=True)
 
@@ -154,7 +155,7 @@ def preprocess_ashrae(cohort_size=BASE_COHORT):
         }
 
     # 9. Save
-    out_csv = os.path.join(out_dir, "ashrae_clean.csv")
+    out_csv = os.path.join(out_dir, csv_name)
     df[["building_id", "timestamp", "meter_reading"]].to_csv(out_csv, index=False)
     print(f"  Saved {out_csv} ({len(df):,} rows)")
 
@@ -171,11 +172,79 @@ def preprocess_ashrae(cohort_size=BASE_COHORT):
         "per_building_splits": per_building_splits,
         "log_transformed": True,
     }
+    if extra_meta:
+        metadata.update(extra_meta)
     meta_path = os.path.join(out_dir, "split_metadata.json")
     with open(meta_path, "w") as f:
         json.dump(metadata, f, indent=2)
     print(f"  Saved {meta_path}")
     return metadata
+
+
+def preprocess_ashrae(cohort_size=BASE_COHORT):
+    """Clean ASHRAE, select `cohort_size` buildings (nested + fixed 15 test),
+    temporal-split, log1p, save."""
+    out_dir = processed_dir("ashrae", cohort_size)
+    os.makedirs(out_dir, exist_ok=True)
+
+    print(f"[ASHRAE] cohort_size={cohort_size} -> {out_dir}")
+    df, available = _clean_ashrae_df()
+
+    if len(available) < cohort_size:
+        print(f"  WARNING: Only {len(available)} buildings available, "
+              f"need {cohort_size}. Using all.")
+
+    # Nested cohort selection + FIXED test set (seeds SEED / SEED+1 as before).
+    selected, train_bids, test_bids = select_buildings(
+        available, cohort_size, sel_seed=SEED, split_seed=SEED + 1)
+    print(f"  Selected {len(selected)} buildings")
+
+    return _finalize_ashrae(df, selected, train_bids, test_bids, out_dir,
+                            "ashrae_clean.csv", cohort_size)
+
+
+def preprocess_imputation(cohort_size=BASE_COHORT):
+    """Imputation task on ASHRAE: a THIRD group of buildings DISJOINT from the
+    forecasting group, so data domain is decoupled from objective type (the
+    pre-registration's central test). Reuses the SAME fixed 15 ASHRAE test
+    buildings as forecasting (windows differ by masking at eval time).
+
+    Selection: clean ASHRAE identically to forecasting, reconstruct the
+    forecasting cohort to EXCLUDE it, then pick `cohort_size - 15` disjoint train
+    buildings (seed SEED+20). LEAD is untouched. Output -> data/imputation/."""
+    out_dir = processed_dir("imputation", cohort_size)
+    os.makedirs(out_dir, exist_ok=True)
+
+    print(f"\n[IMP] cohort_size={cohort_size} -> {out_dir}")
+    df, available = _clean_ashrae_df()
+
+    # Forecasting's cohort (to EXCLUDE) + its fixed 15 test set (to REUSE).
+    fc_selected, _fc_train, fc_test = select_buildings(
+        available, cohort_size, sel_seed=SEED, split_seed=SEED + 1)
+    fc_set = set(fc_selected)
+
+    # Imputation TRAIN clients: cohort_size-15 buildings DISJOINT from forecasting.
+    imp_pool = [b for b in available if b not in fc_set]
+    n_imp_train = cohort_size - N_TEST
+    if len(imp_pool) < n_imp_train:
+        print(f"  WARNING: only {len(imp_pool)} disjoint buildings available, "
+              f"need {n_imp_train}. Using all.")
+        n_imp_train = min(n_imp_train, len(imp_pool))
+    imp_train_bids = sorted(np.random.RandomState(SEED + 20)
+                            .choice(imp_pool, n_imp_train, replace=False).tolist())
+
+    # Imputation TEST = the SAME fixed 15 ASHRAE test buildings as forecasting.
+    test_bids = fc_test
+    selected = sorted(set(imp_train_bids) | set(test_bids))
+    print(f"  Selected {len(imp_train_bids)} disjoint train + "
+          f"{len(test_bids)} shared-test buildings")
+
+    return _finalize_ashrae(
+        df, selected, imp_train_bids, test_bids, out_dir,
+        "imputation_clean.csv", cohort_size,
+        extra_meta={"task": "imputation", "data_source": "ashrae",
+                    "disjoint_from_forecasting": True,
+                    "shares_test_with_forecasting": True})
 
 
 def preprocess_lead(cohort_size=BASE_COHORT):
@@ -268,12 +337,27 @@ if __name__ == "__main__":
                         default=int(os.environ.get("COHORT_SIZE", BASE_COHORT)),
                         help="Buildings per dataset (default 50; ladder 100/200/400). "
                              "LEAD has 400 buildings -> caps the symmetric cohort at 400.")
+    parser.add_argument("--imputation", action="store_true",
+                        help="ALSO build the imputation group (a third, disjoint "
+                             "ASHRAE cohort; reuses the fixed 15 ASHRAE test buildings). "
+                             "Off by default so existing FC/AD data is untouched.")
+    parser.add_argument("--skip-base", action="store_true",
+                        help="Skip the ASHRAE(forecasting) + LEAD(anomaly) build "
+                             "(use with --imputation to add ONLY imputation on top of "
+                             "already-built FC/AD data, leaving those byte-identical).")
     args = parser.parse_args()
 
-    ashrae_meta = preprocess_ashrae(args.cohort)
-    lead_meta = preprocess_lead(args.cohort)
-    print("\n[DONE] Preprocessing complete.")
-    print(f"  ASHRAE: {ashrae_meta['n_train_buildings']} train / "
-          f"{ashrae_meta['n_test_buildings']} test buildings (forecasting)")
-    print(f"  LEAD:   {lead_meta['n_train_buildings']} train / "
-          f"{lead_meta['n_test_buildings']} test buildings (anomaly)")
+    if not args.skip_base:
+        ashrae_meta = preprocess_ashrae(args.cohort)
+        lead_meta = preprocess_lead(args.cohort)
+        print("\n[DONE] Base preprocessing complete.")
+        print(f"  ASHRAE: {ashrae_meta['n_train_buildings']} train / "
+              f"{ashrae_meta['n_test_buildings']} test buildings (forecasting)")
+        print(f"  LEAD:   {lead_meta['n_train_buildings']} train / "
+              f"{lead_meta['n_test_buildings']} test buildings (anomaly)")
+
+    if args.imputation:
+        imp_meta = preprocess_imputation(args.cohort)
+        print("\n[DONE] Imputation preprocessing complete.")
+        print(f"  IMP:    {imp_meta['n_train_buildings']} train (disjoint ASHRAE) / "
+              f"{imp_meta['n_test_buildings']} test buildings (imputation)")

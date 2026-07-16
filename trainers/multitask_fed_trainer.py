@@ -1,22 +1,35 @@
 """
 Multi-Task Federated Trainer with configurable aggregation and FL strategies.
 
+Generic over a REGISTRY of tasks (a `_TaskSpec` list). Each task carries its own
+global model, client loaders, training "kind" (forecast vs masked-reconstruct),
+and (for SCAFFOLD) its own control variates. The backbone is shared across ALL
+tasks' clients; each task's heads (+ any task-private backbone modules) are
+averaged within that task's client group.
+
+  Built-in tasks (see main.py): forecasting (ASHRAE), anomaly (LEAD),
+  imputation (disjoint ASHRAE). Any subset can run via `--tasks`.
+
+Backward compatibility: the legacy 2-task constructor
+`MultiTaskFederatedTrainer(fc_model, an_model, ...)` + `train(fc_loaders,
+an_loaders, fc_test, an_test)` is preserved and executes byte-identically to the
+pre-refactor trainer (task order [forecasting, anomaly], same aggregation
+summation order, same RNG consumption). The committed FC+AD anchors reproduce.
+
 Aggregation modes:
-  - "dual":        Backbone across ALL 70 clients, heads within task (proposed)
+  - "dual":        Backbone across ALL clients, heads within task (proposed)
   - "single_task": FedAvg ALL params within each task group independently
   - "local_only":  No aggregation fed back; clients train from own checkpoints
 
 FL strategies:
-  - "fedavg":   Standard Federated Averaging
-  - "fedprox":  FedAvg + proximal term (Li et al., 2020)
+  - "fedavg":      Standard Federated Averaging
+  - "fedprox":     FedAvg + proximal term (Li et al., 2020)
+  - "scaffold":    SCAFFOLD Option II (reuses training deltas)
+  - "scaffold_c1": SCAFFOLD Option I (control = mean grad recomputed at global)
 
 Architecture split (MambaMixer / SSD-Net):
   Backbone: patch_encoders, patch_decoders, cross_scale_gates
   Heads:    pred_heads, scale_router
-
-After training:
-  - Global Forecasting Model = aggregated backbone + aggregated forecasting heads
-  - Global Anomaly Model    = aggregated backbone + aggregated anomaly heads
 """
 import copy
 import logging
@@ -39,21 +52,61 @@ def _is_backbone(name):
     return any(name.startswith(p) for p in BACKBONE_PREFIXES)
 
 
+class _TaskSpec:
+    """One task in the federated registry.
+
+    Args:
+        name:      unique task id (e.g. "forecasting", "anomaly", "imputation")
+        csv_key:   short prefix used for CSV columns / history keys / legacy
+                   compat ("forecast", "anomaly", "imputation")
+        model:     the task's global MambaMixer
+        kind:      "forecast" (x,y -> MSE) | "reconstruct" (mask-and-reconstruct)
+        client_loaders / test_loader / val_loader: assigned at train() time
+    """
+
+    def __init__(self, name, csv_key, model, kind,
+                 client_loaders=None, test_loader=None, val_loader=None):
+        assert kind in ("forecast", "reconstruct")
+        self.name = name
+        self.csv_key = csv_key
+        self.model = model
+        self.kind = kind
+        self.client_loaders = client_loaders
+        self.test_loader = test_loader
+        self.val_loader = val_loader
+        # runtime state (set during training)
+        self.global_control = None      # SCAFFOLD global control (CPU dict)
+        self.client_controls = None     # SCAFFOLD per-client controls
+        self.persistent = None          # local_only per-client state_dicts
+        self._round_models = None
+        self._round_weights = None
+
+
 class MultiTaskFederatedTrainer:
     """Federated trainer with configurable aggregation and strategies."""
 
     def __init__(self, forecasting_model, anomaly_model, device, config,
                  aux_loss_fn=None, logger=None, csv_logger=None):
-        """
-        Args:
-            forecasting_model: MambaMixer(out_len=24)  -- global forecasting model
-            anomaly_model:     MambaMixer(out_len=128) -- global anomaly model
-            device: torch device (primary)
-            config: ExperimentConfig
-            aux_loss_fn: optional aux loss (called as aux_loss_fn(model))
-            logger: Python logger instance
-            csv_logger: CSVMetricsLogger for per-round tracking
-        """
+        """Legacy 2-task constructor (forecasting + anomaly). Preserved for
+        byte-compatibility with the committed FC+AD runs. For arbitrary task
+        subsets use `MultiTaskFederatedTrainer.from_tasks(...)`."""
+        fc = _TaskSpec("forecasting", "forecast", forecasting_model,
+                       kind="forecast")
+        an = _TaskSpec("anomaly", "anomaly", anomaly_model,
+                       kind="reconstruct")
+        self._setup([fc, an], device, config, aux_loss_fn, logger, csv_logger)
+
+    @classmethod
+    def from_tasks(cls, tasks, device, config, aux_loss_fn=None, logger=None,
+                   csv_logger=None):
+        """Generic constructor over an ordered `_TaskSpec` list."""
+        obj = cls.__new__(cls)
+        obj._setup(tasks, device, config, aux_loss_fn, logger, csv_logger)
+        return obj
+
+    def _setup(self, tasks, device, config, aux_loss_fn, logger, csv_logger):
+        self.tasks = tasks
+        self._task_by_name = {t.name: t for t in tasks}
         self.device = device
         self.config = config
         self.aux_loss_fn = aux_loss_fn
@@ -65,22 +118,19 @@ class MultiTaskFederatedTrainer:
         self.fedprox_mu = getattr(config, 'fedprox_mu', 0.01)
         # SCAFFOLD: two control-update variants share all machinery below.
         #   "scaffold"    -> Option II: c_i+ = c_i - c + (x_global - x_trained)/(K*eta)
-        #                    (reuses the training deltas; scale-miscalibrated under AdamW)
-        #   "scaffold_c1" -> Option I:  c_i+ = mean grad f_i(x_global) (recomputed at the
-        #                    global model; optimizer-agnostic, clean under AdamW)
+        #   "scaffold_c1" -> Option I:  c_i+ = mean grad f_i(x_global)
         self.use_scaffold = self.fl_strategy in ("scaffold", "scaffold_c1")
         self.scaffold_option = 1 if self.fl_strategy == "scaffold_c1" else 2
         # Selective backbone sharing (dual only): which backbone modules are
-        # cross-task-shared. None => whole backbone == original dual. Backbone
-        # params outside this set are aggregated within task group (task-private).
+        # cross-task-shared. None => whole backbone == original dual.
         self.cross_shared_modules = (getattr(config, 'cross_shared_modules', None)
                                      or BACKBONE_PREFIXES)
 
-        self.forecasting_model = forecasting_model.to(device)
-        self.anomaly_model = anomaly_model.to(device)
+        # Move each task's global model to the primary device.
+        for t in self.tasks:
+            t.model = t.model.to(device)
 
         # Limit federated training to a configurable number of GPUs.
-        # Defaulting to a single GPU avoids fragile threaded CUDA execution.
         n_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
         max_federated_gpus = max(1, getattr(self.config, "max_federated_gpus", 1))
         usable_gpus = min(n_gpus, max_federated_gpus)
@@ -95,28 +145,57 @@ class MultiTaskFederatedTrainer:
                     "Single-GPU mode on %s (available: %d, max: %d)",
                     device, n_gpus, max_federated_gpus)
 
-        # Verify backbone compatibility
         self._verify_backbone_compatibility()
 
-        self.history = {
-            "round": [],
-            "forecast_test_loss": [],
-            "anomaly_test_loss": [],
-            "round_seconds": [],  # wall-clock per round (contention diagnosis)
-        }
+        self.history = {"round": [], "round_seconds": []}
+        for t in self.tasks:
+            self.history[f"{t.csv_key}_test_loss"] = []
+
+    # ── Backward-compatible model accessors ──
+
+    @property
+    def forecasting_model(self):
+        return self._task_by_name["forecasting"].model
+
+    @property
+    def anomaly_model(self):
+        return self._task_by_name["anomaly"].model
+
+    def _model_by_name(self, name):
+        return self._task_by_name[name].model
+
+    # SCAFFOLD control accessors under the legacy per-task names (used by
+    # validate_scaffold.py). Valid for the compat 2-task registry.
+    @property
+    def global_control_fc(self):
+        return self._task_by_name["forecasting"].global_control
+
+    @property
+    def client_controls_fc(self):
+        return self._task_by_name["forecasting"].client_controls
+
+    @property
+    def global_control_an(self):
+        return self._task_by_name["anomaly"].global_control
+
+    @property
+    def client_controls_an(self):
+        return self._task_by_name["anomaly"].client_controls
 
     def _verify_backbone_compatibility(self):
-        """Ensure both models have identical backbone parameter shapes."""
-        fc_state = self.forecasting_model.state_dict()
-        an_state = self.anomaly_model.state_dict()
-        for name in fc_state:
-            if _is_backbone(name):
-                assert name in an_state, (
-                    f"Backbone param '{name}' missing from anomaly model")
-                assert fc_state[name].shape == an_state[name].shape, (
-                    f"Shape mismatch for '{name}': "
-                    f"{fc_state[name].shape} vs {an_state[name].shape}")
-        self.log.info("Backbone compatibility verified.")
+        """Ensure all tasks' models have identical backbone parameter shapes."""
+        ref = self.tasks[0].model.state_dict()
+        for t in self.tasks[1:]:
+            st = t.model.state_dict()
+            for name in ref:
+                if _is_backbone(name):
+                    assert name in st, (
+                        f"Backbone param '{name}' missing from task '{t.name}'")
+                    assert ref[name].shape == st[name].shape, (
+                        f"Shape mismatch for '{name}' in task '{t.name}': "
+                        f"{ref[name].shape} vs {st[name].shape}")
+        self.log.info("Backbone compatibility verified across %d tasks.",
+                      len(self.tasks))
 
     def _compute_aux_loss(self, model):
         if self.aux_loss_fn is not None:
@@ -124,31 +203,27 @@ class MultiTaskFederatedTrainer:
         return 0.0
 
     def _save_latest_checkpoint(self, round_num):
-        """Overwrite a per-round 'latest' snapshot of the global models so a
-        mid-condition crash (e.g. server shutdown) preserves the last completed
-        round's weights instead of losing the whole multi-hour run. ~7MB, <1s ->
-        negligible vs a ~20min round. The final run_federated still writes the
-        canonical `*_model.pt`; these `*_latest.pt` are crash insurance and can be
-        re-eval'd via eval_from_checkpoint. Failure here never aborts training."""
+        """Overwrite per-round 'latest' snapshots of each task's global model so a
+        mid-condition crash preserves the last completed round. Failure here never
+        aborts training."""
         try:
             ckpt_dir = self.config.checkpoint_dir
             os.makedirs(ckpt_dir, exist_ok=True)
             tag = getattr(self.config, "cohort_tag", "")
             prefix = f"fed_{self.aggregation_mode}_{self.fl_strategy}{tag}"
-            torch.save(self.forecasting_model.state_dict(),
-                       os.path.join(ckpt_dir, f"{prefix}_forecasting_latest.pt"))
-            torch.save(self.anomaly_model.state_dict(),
-                       os.path.join(ckpt_dir, f"{prefix}_anomaly_latest.pt"))
+            for t in self.tasks:
+                torch.save(t.model.state_dict(),
+                           os.path.join(ckpt_dir, f"{prefix}_{t.name}_latest.pt"))
         except Exception as e:  # crash insurance must never crash the run itself
             self.log.warning("  per-round 'latest' checkpoint save failed "
                              "(round %d): %s", round_num + 1, e)
 
-    # ── Local training ──
+    # ── Local training (dispatched by task kind) ──
 
-    def _train_forecasting_client_on(self, client_model, train_loader,
-                                     target_device, global_params=None,
-                                     global_control=None, client_control=None):
-        """Train one forecasting client. Supports FedAvg/FedProx/SCAFFOLD."""
+    def _train_forecast_kind(self, client_model, train_loader, target_device,
+                             global_params=None, global_control=None,
+                             client_control=None):
+        """Train one forecasting-kind client. FedAvg/FedProx/SCAFFOLD."""
         client_model.train()
         loss_fn = nn.MSELoss()
         optimizer = torch.optim.AdamW(
@@ -166,7 +241,6 @@ class MultiTaskFederatedTrainer:
                 y_pred = client_model(x)
                 loss = loss_fn(y_pred, y) + self._compute_aux_loss(client_model)
 
-                # FedProx: proximal term  mu/2 * ||w - w_global||^2
                 if self.fl_strategy == "fedprox" and global_params is not None:
                     prox = sum(
                         ((p - global_params[n]) ** 2).sum()
@@ -176,7 +250,6 @@ class MultiTaskFederatedTrainer:
 
                 loss.backward()
 
-                # SCAFFOLD: gradient correction  g_corrected = g - c_i + c
                 if self.use_scaffold and global_control is not None:
                     for n, p in client_model.named_parameters():
                         if p.grad is not None and n in global_control:
@@ -191,10 +264,11 @@ class MultiTaskFederatedTrainer:
 
         return client_model, total_loss / max(n_batches, 1)
 
-    def _train_anomaly_client_on(self, client_model, train_loader,
-                                 target_device, global_params=None,
-                                 global_control=None, client_control=None):
-        """Train one anomaly client. Supports FedAvg/FedProx/SCAFFOLD."""
+    def _train_reconstruct_kind(self, client_model, train_loader, target_device,
+                                global_params=None, global_control=None,
+                                client_control=None):
+        """Train one reconstruct-kind client (anomaly / imputation): random mask,
+        loss on masked positions only. FedAvg/FedProx/SCAFFOLD."""
         client_model.train()
         loss_fn = nn.MSELoss(reduction='none')
         optimizer = torch.optim.AdamW(
@@ -224,7 +298,6 @@ class MultiTaskFederatedTrainer:
                         else per_elem.mean())
                 loss = loss + self._compute_aux_loss(client_model)
 
-                # FedProx: proximal term
                 if self.fl_strategy == "fedprox" and global_params is not None:
                     prox = sum(
                         ((p - global_params[n]) ** 2).sum()
@@ -234,7 +307,6 @@ class MultiTaskFederatedTrainer:
 
                 loss.backward()
 
-                # SCAFFOLD: gradient correction
                 if self.use_scaffold and global_control is not None:
                     for n, p in client_model.named_parameters():
                         if p.grad is not None and n in global_control:
@@ -249,18 +321,16 @@ class MultiTaskFederatedTrainer:
 
         return client_model, total_loss / max(n_batches, 1)
 
+    def _train_fn_for(self, kind):
+        return (self._train_forecast_kind if kind == "forecast"
+                else self._train_reconstruct_kind)
+
     # ── SCAFFOLD Option I: control = mean gradient at the global model ──
 
-    def _grad_at_params_forecasting(self, model, train_loader, target_device):
-        """SCAFFOLD Option I control: mean gradient of the forecasting loss over
-        the client's data, evaluated at the model's CURRENT (== global) params.
-        No optimizer step, no control correction. Returns {name: grad} on CPU.
-
-        `model` is the fresh global-model copy BEFORE local training moves it, so
-        this is grad f_i(x_global) — the optimizer-agnostic control variate. Only
-        the leftover .grad is touched (zeroed on exit); params are unchanged, so the
-        same object is trained afterwards.
-        """
+    def _grad_forecast_kind(self, model, train_loader, target_device):
+        """SCAFFOLD Option I control (forecast kind): mean gradient of the loss
+        over the client's data at the model's CURRENT (== global) params. No
+        optimizer step. Returns {name: grad} on CPU; params unchanged."""
         model.train()
         loss_fn = nn.MSELoss()
         model.zero_grad(set_to_none=True)
@@ -278,12 +348,9 @@ class MultiTaskFederatedTrainer:
         model.zero_grad(set_to_none=True)
         return grads
 
-    def _grad_at_params_anomaly(self, model, train_loader, target_device):
-        """SCAFFOLD Option I control for the anomaly (masked-reconstruct) loss —
-        mean gradient over the client's data at the model's current params.
-        Mirrors `_train_anomaly_client_on`'s loss (random mask, loss on masked
-        positions only). Returns {name: grad} on CPU.
-        """
+    def _grad_reconstruct_kind(self, model, train_loader, target_device):
+        """SCAFFOLD Option I control (reconstruct kind): mean gradient of the
+        masked-reconstruct loss over the client's data at current params."""
         model.train()
         loss_fn = nn.MSELoss(reduction='none')
         mask_rate = self.config.mask_rate
@@ -309,6 +376,18 @@ class MultiTaskFederatedTrainer:
         model.zero_grad(set_to_none=True)
         return grads
 
+    def _grad_fn_for(self, kind):
+        return (self._grad_forecast_kind if kind == "forecast"
+                else self._grad_reconstruct_kind)
+
+    # Backward-compat aliases: the pre-refactor per-task method names, kept so
+    # external scripts (analyze_update_conflict.py, older utilities) that grab
+    # e.g. `trainer._train_forecasting_client_on` keep working. Same signatures.
+    _train_forecasting_client_on = _train_forecast_kind
+    _train_anomaly_client_on = _train_reconstruct_kind
+    _grad_at_params_forecasting = _grad_forecast_kind
+    _grad_at_params_anomaly = _grad_reconstruct_kind
+
     # ── Aggregation methods ──
 
     def _is_cross_shared(self, name):
@@ -317,207 +396,151 @@ class MultiTaskFederatedTrainer:
         return _is_backbone(name) and any(
             name.startswith(p) for p in self.cross_shared_modules)
 
-    def _dual_aggregate(self, forecast_clients, forecast_weights,
-                        anomaly_clients, anomaly_weights):
+    @staticmethod
+    def _avg(name, states, weights, ref):
+        """Weighted average of `name` over `states`; copy for int buffers."""
+        if not ref[name].is_floating_point():
+            return states[0][name]
+        agg = torch.zeros_like(ref[name])
+        for sd, w in zip(states, weights):
+            agg += w * sd[name]
+        return agg
+
+    def _dual_aggregate(self):
+        """Dual FedAvg (proposed), generic over the task registry, with optional
+        SELECTIVE sharing:
+          1. Cross-shared backbone modules: weighted avg across ALL clients of
+             ALL tasks.
+          2. Everything else, per task: weighted avg WITHIN that task's client
+             group (task-private backbone modules + that task's heads).
+        For the 2-task [forecasting, anomaly] registry with whole-backbone
+        sharing this is byte-identical to the original `dual`.
         """
-        Dual FedAvg aggregation (proposed method), with optional SELECTIVE sharing:
-          1. Cross-shared backbone modules: weighted avg across ALL 70 clients.
-          2. Everything else, per model, weighted-averaged WITHIN its task group:
-             - forecasting model: task-private backbone modules + forecasting heads
-               over the 35 forecasting clients;
-             - anomaly model: task-private backbone modules + anomaly heads over the
-               35 anomaly clients.
-        When `cross_shared_modules` covers the whole backbone (the default), (2)
-        reduces to "heads only" and this is byte-identical to the original dual.
-        """
-        all_weights_raw = forecast_weights + anomaly_weights
+        # Per-task client states + weights, in task order.
+        per_task_states = [[m.state_dict() for m in t._round_models]
+                           for t in self.tasks]
+        per_task_weights = [list(t._round_weights) for t in self.tasks]
+
+        # All clients (task order preserved) for the cross-shared backbone.
+        all_states, all_weights_raw = [], []
+        for states, weights in zip(per_task_states, per_task_weights):
+            all_states.extend(states)
+            all_weights_raw.extend(weights)
         total = sum(all_weights_raw)
         all_weights = [w / total for w in all_weights_raw]
 
-        fc_total = sum(forecast_weights)
-        fc_weights_norm = [w / fc_total for w in forecast_weights]
-        an_total = sum(anomaly_weights)
-        an_weights_norm = [w / an_total for w in anomaly_weights]
+        ref = self.tasks[0].model.state_dict()  # backbone shapes shared
+        global_shared = {name: self._avg(name, all_states, all_weights, ref)
+                         for name in ref if self._is_cross_shared(name)}
 
-        # Cache state_dicts (avoids repeated allocation in inner loops)
-        fc_client_states = [m.state_dict() for m in forecast_clients]
-        an_client_states = [m.state_dict() for m in anomaly_clients]
-        all_client_states = fc_client_states + an_client_states
+        # Per-task private params (everything not cross-shared).
+        for t, states, weights in zip(self.tasks, per_task_states,
+                                      per_task_weights):
+            tot = sum(weights)
+            wn = [w / tot for w in weights]
+            tstate = t.model.state_dict()
+            private = {name: self._avg(name, states, wn, tstate)
+                       for name in tstate if name not in global_shared}
+            t.model.load_state_dict({**global_shared, **private})
 
-        def _avg(name, states, weights, ref):
-            """Weighted average of `name` over `states`; copy for int buffers."""
-            if not ref[name].is_floating_point():
-                return states[0][name]
-            agg = torch.zeros_like(ref[name])
-            for sd, w in zip(states, weights):
-                agg += w * sd[name]
-            return agg
-
-        fc_state = self.forecasting_model.state_dict()
-        an_state = self.anomaly_model.state_dict()
-
-        # 1. Cross-shared backbone: average across ALL clients
-        global_shared = {name: _avg(name, all_client_states, all_weights, fc_state)
-                         for name in fc_state if self._is_cross_shared(name)}
-
-        # 2a. Forecasting model: everything not cross-shared, over forecasting clients
-        fc_private = {name: _avg(name, fc_client_states, fc_weights_norm, fc_state)
-                      for name in fc_state if name not in global_shared}
-
-        # 2b. Anomaly model: everything not cross-shared, over anomaly clients
-        an_private = {name: _avg(name, an_client_states, an_weights_norm, an_state)
-                      for name in an_state if name not in global_shared}
-
-        # 3. Load into global models
-        self.forecasting_model.load_state_dict({**global_shared, **fc_private})
-        self.anomaly_model.load_state_dict({**global_shared, **an_private})
-
-    def _single_task_aggregate(self, forecast_clients, forecast_weights,
-                               anomaly_clients, anomaly_weights):
+    def _single_task_aggregate(self):
         """FedAvg ALL params within each task group. No cross-task sharing."""
-        # Cache state_dicts once
-        fc_client_states = [m.state_dict() for m in forecast_clients]
-        an_client_states = [m.state_dict() for m in anomaly_clients]
+        for t in self.tasks:
+            states = [m.state_dict() for m in t._round_models]
+            weights = list(t._round_weights)
+            tot = sum(weights)
+            wn = [w / tot for w in weights]
+            tstate = t.model.state_dict()
+            new_state = {name: self._avg(name, states, wn, tstate)
+                         for name in tstate}
+            t.model.load_state_dict(new_state)
 
-        # Forecasting: average all params across forecasting clients only
-        fc_total = sum(forecast_weights)
-        fc_weights_norm = [w / fc_total for w in forecast_weights]
-        fc_state = self.forecasting_model.state_dict()
-        new_fc = {}
-        for name in fc_state:
-            if fc_state[name].is_floating_point():
-                agg = torch.zeros_like(fc_state[name])
-                for sd, w in zip(fc_client_states, fc_weights_norm):
-                    agg += w * sd[name]
-                new_fc[name] = agg
-            else:
-                new_fc[name] = fc_client_states[0][name]
-        self.forecasting_model.load_state_dict(new_fc)
-
-        # Anomaly: average all params across anomaly clients only
-        an_total = sum(anomaly_weights)
-        an_weights_norm = [w / an_total for w in anomaly_weights]
-        an_state = self.anomaly_model.state_dict()
-        new_an = {}
-        for name in an_state:
-            if an_state[name].is_floating_point():
-                agg = torch.zeros_like(an_state[name])
-                for sd, w in zip(an_client_states, an_weights_norm):
-                    agg += w * sd[name]
-                new_an[name] = agg
-            else:
-                new_an[name] = an_client_states[0][name]
-        self.anomaly_model.load_state_dict(new_an)
-
-    def _local_only_aggregate(self, forecast_clients, forecast_weights,
-                              anomaly_clients, anomaly_weights):
-        """Average within-task models for EVALUATION only.
-
-        The aggregated global models are used for metric computation but are
-        NOT fed back into client initialization — each client continues from
-        its own persistent checkpoint in the next round.
-        """
-        self._single_task_aggregate(forecast_clients, forecast_weights,
-                                    anomaly_clients, anomaly_weights)
+    def _local_only_aggregate(self):
+        """Average within-task models for EVALUATION only (not fed back)."""
+        self._single_task_aggregate()
 
     # ── SCAFFOLD control variate management ──
 
     def _init_scaffold(self):
-        """Initialize SCAFFOLD control variates (all zeros)."""
-        self.global_control_fc = {
-            n: torch.zeros_like(p).cpu()
-            for n, p in self.forecasting_model.named_parameters()}
-        self.global_control_an = {
-            n: torch.zeros_like(p).cpu()
-            for n, p in self.anomaly_model.named_parameters()}
-        self.client_controls_fc = {}
-        self.client_controls_an = {}
-        self.log.info("SCAFFOLD control variates initialized.")
+        """Initialize SCAFFOLD control variates (all zeros) per task."""
+        for t in self.tasks:
+            t.global_control = {
+                n: torch.zeros_like(p).cpu()
+                for n, p in t.model.named_parameters()}
+            t.client_controls = {}
+        self.log.info("SCAFFOLD control variates initialized (%d tasks).",
+                      len(self.tasks))
 
-    def _update_scaffold_global_controls(self, fc_ids, an_ids,
-                                         old_fc_controls, old_an_controls):
-        """Update global control variates: c += (1/S) * sum(c_i_new - c_i_old)."""
-        for name in self.global_control_fc:
-            delta_sum = torch.zeros_like(self.global_control_fc[name])
-            n = 0
-            for cid in fc_ids:
-                if cid in self.client_controls_fc:
-                    new_c = self.client_controls_fc[cid][name]
-                    # A client seen for the FIRST time this round had control 0
-                    # at round start (lazily created during training), so its
-                    # snapshot is absent from old_*_controls. Treat missing as
-                    # zero — skipping it drops that client's control mass and
-                    # breaks the invariant c == mean(c_i) (SCAFFOLD paper).
-                    old_c = old_fc_controls.get(cid, {}).get(name)
+    def _update_scaffold_global_controls(self, old_controls):
+        """Update each task's global control: c += (1/S) * sum(c_i_new - c_i_old).
+
+        `old_controls[task.name]` is the round-start snapshot of that task's
+        per-client controls. A client seen for the FIRST time this round had
+        control 0 at round start (lazily created during training) — treat a
+        missing snapshot as zero so its control mass isn't dropped (keeps the
+        SCAFFOLD invariant c == mean(c_i))."""
+        for t in self.tasks:
+            old = old_controls.get(t.name, {})
+            for name in t.global_control:
+                delta_sum = torch.zeros_like(t.global_control[name])
+                n = 0
+                for cid, ctrl in t.client_controls.items():
+                    new_c = ctrl[name]
+                    old_c = old.get(cid, {}).get(name)
                     if old_c is None:
                         old_c = torch.zeros_like(new_c)
                     delta_sum += (new_c - old_c)
                     n += 1
-            if n > 0:
-                self.global_control_fc[name] += delta_sum / n
-
-        for name in self.global_control_an:
-            delta_sum = torch.zeros_like(self.global_control_an[name])
-            n = 0
-            for cid in an_ids:
-                if cid in self.client_controls_an:
-                    new_c = self.client_controls_an[cid][name]
-                    old_c = old_an_controls.get(cid, {}).get(name)
-                    if old_c is None:
-                        old_c = torch.zeros_like(new_c)
-                    delta_sum += (new_c - old_c)
-                    n += 1
-            if n > 0:
-                self.global_control_an[name] += delta_sum / n
+                if n > 0:
+                    t.global_control[name] += delta_sum / n
 
     # ── Evaluation helpers ──
 
-    def _eval_forecasting(self, loader):
-        self.forecasting_model.eval()
+    def _eval_loss(self, task):
+        """Per-round monitoring loss for a task (test MSE)."""
+        model = task.model
+        model.eval()
         losses = []
         loss_fn = nn.MSELoss()
+        loader = task.test_loader
         with torch.no_grad():
-            for x, y in loader:
-                x = x.float().to(self.device)
-                y = y.float().to(self.device)
-                losses.append(loss_fn(self.forecasting_model(x), y).item())
+            if task.kind == "forecast":
+                for x, y in loader:
+                    x = x.float().to(self.device)
+                    y = y.float().to(self.device)
+                    losses.append(loss_fn(model(x), y).item())
+            else:
+                for sequences, labels in loader:
+                    sequences = sequences.float().to(self.device)
+                    if sequences.dim() == 2:
+                        sequences = sequences.unsqueeze(-1)
+                    losses.append(loss_fn(model(sequences), sequences).item())
         return np.mean(losses) if losses else float("inf")
 
-    def _eval_anomaly(self, loader):
-        self.anomaly_model.eval()
-        losses = []
-        loss_fn = nn.MSELoss()
-        with torch.no_grad():
-            for sequences, labels in loader:
-                sequences = sequences.float().to(self.device)
-                if sequences.dim() == 2:
-                    sequences = sequences.unsqueeze(-1)
-                recon = self.anomaly_model(sequences)
-                losses.append(loss_fn(recon, sequences).item())
-        return np.mean(losses) if losses else float("inf")
-
-    def evaluate_forecasting(self, test_loader):
-        """Return predictions and targets from global forecasting model."""
-        self.forecasting_model.eval()
+    def evaluate_forecasting(self, test_loader, model=None):
+        """Return predictions and targets from a forecasting model."""
+        model = model or self._model_by_name("forecasting")
+        model.eval()
         all_preds, all_targets = [], []
         with torch.no_grad():
             for x, y in test_loader:
                 x = x.float().to(self.device)
                 y = y.float().to(self.device)
-                all_preds.append(self.forecasting_model(x).cpu().numpy())
+                all_preds.append(model(x).cpu().numpy())
                 all_targets.append(y.cpu().numpy())
         return np.concatenate(all_preds), np.concatenate(all_targets)
 
-    def evaluate_anomaly_detection(self, data_loader):
-        """Return anomaly scores and labels from global anomaly model."""
-        self.anomaly_model.eval()
+    def evaluate_anomaly_detection(self, data_loader, model=None):
+        """Return anomaly scores and labels from an anomaly model."""
+        model = model or self._model_by_name("anomaly")
+        model.eval()
         all_scores, all_labels = [], []
         with torch.no_grad():
             for sequences, labels in data_loader:
                 sequences = sequences.float().to(self.device)
                 if sequences.dim() == 2:
                     sequences = sequences.unsqueeze(-1)
-                recon = self.anomaly_model(sequences)
+                recon = model(sequences)
                 point_errors = (recon - sequences) ** 2
                 window_scores = point_errors.mean(
                     dim=tuple(range(1, point_errors.dim())))
@@ -527,19 +550,62 @@ class MultiTaskFederatedTrainer:
                                   else [labels])
         return np.array(all_scores), np.array(all_labels)
 
+    def _make_eval_mask(self, shape, mask_rate, pattern, rng):
+        """Deterministic eval mask (1=keep, 0=masked). shape=(B,L,C).
+        `pattern`: 'random' point masking or 'block' contiguous-span masking
+        (one random span per window along the time axis)."""
+        B, L, C = shape
+        if pattern == "block":
+            span = max(1, int(round(mask_rate * L)))
+            mask = np.ones((B, L, C), dtype=np.float32)
+            for b in range(B):
+                start = rng.randint(0, max(1, L - span + 1))
+                mask[b, start:start + span, :] = 0.0
+            return torch.from_numpy(mask)
+        # random point masking
+        m = (rng.rand(B, L, C) > mask_rate).astype(np.float32)
+        return torch.from_numpy(m)
+
+    def evaluate_imputation(self, test_loader, model=None, mask_rate=None,
+                            mask_pattern="random", seed=1234):
+        """Impute masked values on the test windows and return the (true, pred)
+        values AT MASKED POSITIONS ONLY, as flat numpy arrays. The mask is drawn
+        deterministically (seeded, in dataloader order) so the metric is
+        reproducible. Feed the result to compute_imputation_metrics."""
+        model = model or self._model_by_name("imputation")
+        model.eval()
+        mr = self.config.mask_rate if mask_rate is None else mask_rate
+        rng = np.random.RandomState(seed)
+        trues, preds = [], []
+        with torch.no_grad():
+            for sequences, _labels in test_loader:
+                sequences = sequences.float().to(self.device)
+                if sequences.dim() == 2:
+                    sequences = sequences.unsqueeze(-1)
+                mask = self._make_eval_mask(
+                    tuple(sequences.shape), mr, mask_pattern, rng
+                ).to(self.device)
+                recon = model(sequences * mask, x_mask=mask)
+                masked_pos = (mask == 0)
+                if masked_pos.any():
+                    trues.append(sequences[masked_pos].cpu().numpy())
+                    preds.append(recon[masked_pos].cpu().numpy())
+        if not trues:
+            return np.array([]), np.array([])
+        return np.concatenate(trues), np.concatenate(preds)
+
     # ── Client training helper ──
 
-    def _train_all_clients_on_device(self, client_ids, client_loaders,
-                                     global_model, train_fn, target_device,
-                                     task="forecasting",
-                                     persistent_clients=None, grad_fn=None):
-        """Train all clients in a group on a single device.
-
-        Handles all FL strategies (fedavg, fedprox, scaffold, scaffold_c1) and
-        supports local_only mode via persistent_clients dict. `grad_fn` (the
-        task-matched gradient-at-global helper) is required for SCAFFOLD Option I.
-        """
+    def _train_all_clients_on_device(self, task, target_device):
+        """Train all clients of `task` on a single device. Handles all FL
+        strategies (fedavg/fedprox/scaffold/scaffold_c1) and local_only."""
         group_start = time.time()
+        global_model = task.model
+        client_loaders = task.client_loaders
+        client_ids = list(client_loaders.keys())
+        train_fn = self._train_fn_for(task.kind)
+        grad_fn = self._grad_fn_for(task.kind)
+        persistent_clients = task.persistent
         models, weights = [], []
 
         # FedProx: snapshot global params once per group
@@ -552,11 +618,9 @@ class MultiTaskFederatedTrainer:
         global_control = None
         controls_dict = None
         if self.use_scaffold:
-            gc = (self.global_control_fc if task == "forecasting"
-                  else self.global_control_an)
-            global_control = {n: v.to(target_device) for n, v in gc.items()}
-            controls_dict = (self.client_controls_fc if task == "forecasting"
-                            else self.client_controls_an)
+            global_control = {n: v.to(target_device)
+                              for n, v in task.global_control.items()}
+            controls_dict = task.client_controls
 
         for cid in client_ids:
             cdata = client_loaders[cid]
@@ -565,7 +629,6 @@ class MultiTaskFederatedTrainer:
 
             # Initialize client model
             if persistent_clients is not None and cid in persistent_clients:
-                # Local-only: create fresh model, load client's saved state
                 client = copy.deepcopy(global_model).to(target_device)
                 saved = persistent_clients[cid]
                 client.load_state_dict(
@@ -584,18 +647,12 @@ class MultiTaskFederatedTrainer:
                                   for n, v in controls_dict[cid].items()}
 
             # SCAFFOLD Option I: recompute the control as the mean gradient at the
-            # global model, on `client` BEFORE it is trained (it currently == the
-            # global model). Params unchanged; only leftover .grad is touched.
+            # global model, on `client` BEFORE it is trained (currently == the
+            # global model). Isolate this extra pass from training's RNG stream
+            # (dropout, the mask) by save/restoring generator state, so Option I
+            # diverges from FedAvg ONLY through the control variates.
             option1_control = None
             if self.use_scaffold and self.scaffold_option == 1:
-                if grad_fn is None:
-                    raise ValueError("SCAFFOLD Option I (scaffold_c1) requires a "
-                                     "grad_fn to be passed for task %r" % task)
-                # Isolate this extra pass from training's RNG stream (dropout, the
-                # anomaly mask via rand_like) by save/restoring generator state, so
-                # Option I diverges from FedAvg ONLY through the control variates,
-                # not through incidental RNG consumption — keeps the null test
-                # meaningful and the comparison to the fedavg anchor clean.
                 cpu_rng = torch.get_rng_state()
                 cuda_rng = None
                 dev_t = torch.device(target_device)
@@ -615,10 +672,8 @@ class MultiTaskFederatedTrainer:
 
             # SCAFFOLD: update client control variate
             if self.use_scaffold and self.scaffold_option == 1:
-                # Option I: c_i+ = mean grad f_i(x_global) (already on CPU)
                 controls_dict[cid] = option1_control
             elif self.use_scaffold:
-                # Option II: c_i+ = c_i - c + (x_global - x_trained) / (K * eta)
                 n_steps = self.config.local_epochs * len(cdata["train"])
                 lr = self.config.client_lr
                 new_control = {}
@@ -639,45 +694,45 @@ class MultiTaskFederatedTrainer:
             models.append(trained)
             weights.append(cdata["n_samples"])
 
-            # Local-only: persist client state_dict for next round
-            # (plain CPU tensors — avoids CUDA deepcopy which segfaults over many rounds)
+            # Local-only: persist client state_dict for next round (CPU tensors)
             if persistent_clients is not None:
                 persistent_clients[cid] = {
                     k: v.cpu().clone() for k, v in trained.state_dict().items()
                 }
 
-        # Per-group wall-time on `target_device` — in the 2-GPU path the two
-        # groups run concurrently, so comparing these reveals the task imbalance
-        # (and thus whether splitting by task across GPUs actually helps).
         self.log.info("  [%s] %d clients trained on %s in %.0fs",
-                      task, len(models), target_device, time.time() - group_start)
-
+                      task.name, len(models), target_device,
+                      time.time() - group_start)
         return models, weights
 
     # ── Main training loop ──
 
     def train(self, forecast_client_loaders, anomaly_client_loaders,
               forecast_test_loader, anomaly_test_loader):
-        """Run multi-task federated training.
+        """Legacy 2-task entry point (forecasting + anomaly). Assigns loaders to
+        the compat tasks and runs the generic loop; returns history with the
+        legacy keys (`forecast_test_loss`, `anomaly_test_loss`)."""
+        self._task_by_name["forecasting"].client_loaders = forecast_client_loaders
+        self._task_by_name["forecasting"].test_loader = forecast_test_loader
+        self._task_by_name["anomaly"].client_loaders = anomaly_client_loaders
+        self._task_by_name["anomaly"].test_loader = anomaly_test_loader
+        return self._run()
 
-        Args:
-            forecast_client_loaders: {bid: {"train": loader, "n_samples": int}}
-            anomaly_client_loaders:  {bid: {"train": loader, "n_samples": int}}
-            forecast_test_loader: ASHRAE test buildings
-            anomaly_test_loader:  LEAD test buildings
+    def train_tasks(self):
+        """Generic entry point: loaders already attached to each _TaskSpec (via
+        from_tasks + assignment)."""
+        return self._run()
 
-        Returns:
-            history dict with per-round metrics
-        """
-        fc_ids = list(forecast_client_loaders.keys())
-        an_ids = list(anomaly_client_loaders.keys())
-        total_clients = len(fc_ids) + len(an_ids)
+    def _run(self):
+        """Run multi-task federated training over the attached task registry."""
+        total_clients = sum(len(t.client_loaders) for t in self.tasks)
 
         self.log.info("Multi-Task Federated Training")
         self.log.info("  Mode: %s | Strategy: %s",
                       self.aggregation_mode, self.fl_strategy)
-        self.log.info("  Forecasting clients: %d", len(fc_ids))
-        self.log.info("  Anomaly clients:     %d", len(an_ids))
+        for t in self.tasks:
+            self.log.info("  Task %-12s (%s): %d clients",
+                          t.name, t.kind, len(t.client_loaders))
         self.log.info("  Total clients:       %d", total_clients)
         self.log.info("  Rounds: %d, Local epochs: %d",
                       self.config.num_rounds, self.config.local_epochs)
@@ -685,13 +740,13 @@ class MultiTaskFederatedTrainer:
         if self.fl_strategy == "fedprox":
             self.log.info("  FedProx mu: %.4f", self.fedprox_mu)
 
-        # Initialize SCAFFOLD control variates
         if self.use_scaffold:
             self._init_scaffold()
 
-        # Initialize persistent client models for local_only mode
-        persistent_fc = {} if self.aggregation_mode == "local_only" else None
-        persistent_an = {} if self.aggregation_mode == "local_only" else None
+        # local_only: persistent per-client state per task
+        if self.aggregation_mode == "local_only":
+            for t in self.tasks:
+                t.persistent = {}
 
         use_parallel = len(self.devices) >= 2
 
@@ -700,110 +755,71 @@ class MultiTaskFederatedTrainer:
             self.log.info("Round %d/%d | %d clients",
                          round_num + 1, self.config.num_rounds, total_clients)
 
-            # Snapshot SCAFFOLD controls for delta computation
-            old_fc_controls, old_an_controls = {}, {}
+            # Snapshot SCAFFOLD controls for delta computation (per task)
+            old_controls = {}
             if self.use_scaffold:
-                old_fc_controls = {
-                    cid: {n: v.clone() for n, v in
-                          self.client_controls_fc[cid].items()}
-                    for cid in fc_ids
-                    if cid in self.client_controls_fc}
-                old_an_controls = {
-                    cid: {n: v.clone() for n, v in
-                          self.client_controls_an[cid].items()}
-                    for cid in an_ids
-                    if cid in self.client_controls_an}
+                for t in self.tasks:
+                    old_controls[t.name] = {
+                        cid: {n: v.clone() for n, v in ctrl.items()}
+                        for cid, ctrl in t.client_controls.items()}
 
             # ── Train all clients ──
             if use_parallel:
-                with ThreadPoolExecutor(max_workers=2) as executor:
-                    fc_future = executor.submit(
-                        self._train_all_clients_on_device,
-                        fc_ids, forecast_client_loaders,
-                        self.forecasting_model,
-                        self._train_forecasting_client_on,
-                        self.devices[0],
-                        task="forecasting",
-                        persistent_clients=persistent_fc,
-                        grad_fn=self._grad_at_params_forecasting)
-                    an_future = executor.submit(
-                        self._train_all_clients_on_device,
-                        an_ids, anomaly_client_loaders,
-                        self.anomaly_model,
-                        self._train_anomaly_client_on,
-                        self.devices[1],
-                        task="anomaly",
-                        persistent_clients=persistent_an,
-                        grad_fn=self._grad_at_params_anomaly)
-
-                    forecast_models, forecast_weights = fc_future.result()
-                    anomaly_models, anomaly_weights = an_future.result()
+                with ThreadPoolExecutor(max_workers=len(self.devices)) as ex:
+                    futures = {}
+                    for i, t in enumerate(self.tasks):
+                        dev = self.devices[i % len(self.devices)]
+                        futures[t.name] = ex.submit(
+                            self._train_all_clients_on_device, t, dev)
+                    for t in self.tasks:
+                        t._round_models, t._round_weights = \
+                            futures[t.name].result()
             else:
-                forecast_models, forecast_weights = \
-                    self._train_all_clients_on_device(
-                        fc_ids, forecast_client_loaders,
-                        self.forecasting_model,
-                        self._train_forecasting_client_on,
-                        self.device,
-                        task="forecasting",
-                        persistent_clients=persistent_fc,
-                        grad_fn=self._grad_at_params_forecasting)
-                anomaly_models, anomaly_weights = \
-                    self._train_all_clients_on_device(
-                        an_ids, anomaly_client_loaders,
-                        self.anomaly_model,
-                        self._train_anomaly_client_on,
-                        self.device,
-                        task="anomaly",
-                        persistent_clients=persistent_an,
-                        grad_fn=self._grad_at_params_anomaly)
+                for t in self.tasks:
+                    t._round_models, t._round_weights = \
+                        self._train_all_clients_on_device(t, self.device)
 
             # ── Aggregation ──
             if self.aggregation_mode == "dual":
-                self._dual_aggregate(forecast_models, forecast_weights,
-                                     anomaly_models, anomaly_weights)
+                self._dual_aggregate()
             elif self.aggregation_mode == "single_task":
-                self._single_task_aggregate(forecast_models, forecast_weights,
-                                            anomaly_models, anomaly_weights)
+                self._single_task_aggregate()
             elif self.aggregation_mode == "local_only":
-                self._local_only_aggregate(forecast_models, forecast_weights,
-                                           anomaly_models, anomaly_weights)
+                self._local_only_aggregate()
 
-            # Update SCAFFOLD global controls
             if self.use_scaffold:
-                self._update_scaffold_global_controls(
-                    fc_ids, an_ids, old_fc_controls, old_an_controls)
+                self._update_scaffold_global_controls(old_controls)
 
             # ── Evaluate (every eval_every rounds; always on the final round) ──
             eval_every = max(1, getattr(self.config, "eval_every", 1))
             is_last = (round_num + 1) == self.config.num_rounds
             if (round_num + 1) % eval_every == 0 or is_last:
-                fc_loss = self._eval_forecasting(forecast_test_loader)
-                an_loss = self._eval_anomaly(anomaly_test_loader)
+                losses = {t.name: self._eval_loss(t) for t in self.tasks}
                 round_seconds = time.time() - round_start
 
                 self.history["round"].append(round_num + 1)
-                self.history["forecast_test_loss"].append(fc_loss)
-                self.history["anomaly_test_loss"].append(an_loss)
                 self.history["round_seconds"].append(round_seconds)
+                for t in self.tasks:
+                    self.history[f"{t.csv_key}_test_loss"].append(
+                        losses[t.name])
 
-                self.log.info("  Forecast test MSE: %.6f | Anomaly test MSE: %.6f "
-                             "| round %.0fs", fc_loss, an_loss, round_seconds)
+                msg = " | ".join(f"{t.name} test MSE: {losses[t.name]:.6f}"
+                                 for t in self.tasks)
+                self.log.info("  %s | round %.0fs", msg, round_seconds)
 
-                # CSV logging
                 if self.csv_logger is not None:
-                    self.csv_logger.log({
-                        "round": round_num + 1,
-                        "forecast_test_mse": f"{fc_loss:.6f}",
-                        "anomaly_test_mse": f"{an_loss:.6f}",
-                        "round_seconds": f"{round_seconds:.1f}",
-                    })
+                    row = {"round": round_num + 1,
+                           "round_seconds": f"{round_seconds:.1f}"}
+                    for t in self.tasks:
+                        row[f"{t.csv_key}_test_mse"] = f"{losses[t.name]:.6f}"
+                    self.csv_logger.log(row)
 
-            # Per-round crash insurance (overwrites the '_latest' snapshot).
+            # Per-round crash insurance
             self._save_latest_checkpoint(round_num)
 
             # Free client models
-            del forecast_models, anomaly_models
+            for t in self.tasks:
+                t._round_models = None
             for dev in self.devices:
                 if dev.type == "cuda":
                     with torch.cuda.device(dev):
