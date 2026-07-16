@@ -58,13 +58,26 @@ def criterion_from_dump(npz_path, js_path):
     # ||mu_a - mu_b||^2 with uniform means (internally consistent with the model)
     D2_uni = Saa / n_a ** 2 + Sbb / n_b ** 2 - 2 * Sab / (n_a * n_b)
 
-    # ||S_a - S_b||^2 from the WEIGHTED aggregates the trainer actually averages (real-data map)
+    # ||S_a - S_b||^2 from the WEIGHTED aggregates the trainer actually averages
+    # (the real-data map). Prefer the per-task aggregate delta VECTORS dumped in
+    # the npz (generic, any pair); fall back to the JSON norms+cos of the
+    # committed FC-AD anchor dumps (which predate the vector dump), so the frozen
+    # pre-registration number stays byte-reproducible.
     D2_wt = None
-    if os.path.exists(js_path):
+    ga, gb = f"agg__{a}", f"agg__{b}"
+    if ga in z.files and gb in z.files:
+        da, db = z[ga].astype(np.float64), z[gb].astype(np.float64)
+        D2_wt = float(np.sum((da - db) ** 2))
+    elif os.path.exists(js_path):
         js = json.load(open(js_path))
-        nf, na, ca = js.get("norm_fc"), js.get("norm_an"), js.get("headline_cos_agg")
-        if None not in (nf, na, ca):
-            D2_wt = nf ** 2 + na ** 2 - 2 * nf * na * ca
+        cos = js.get("headline_cos_agg")
+        agg = js.get("agg_norms")            # generic {label: norm}
+        if agg is not None and cos is not None and a in agg and b in agg:
+            D2_wt = agg[a] ** 2 + agg[b] ** 2 - 2 * agg[a] * agg[b] * cos
+        else:                                 # legacy FC-AD keys
+            nf, na_, ca = js.get("norm_fc"), js.get("norm_an"), cos
+            if None not in (nf, na_, ca):
+                D2_wt = nf ** 2 + na_ ** 2 - 2 * nf * na_ * ca
 
     gamma2 = tau2 / n
     dstar2 = 2 * gamma2
