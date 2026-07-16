@@ -5,10 +5,6 @@
 [2026-07-16 13:06:16] INFO | experiment | STEP 2b: MULTI-TASK FEDERATED LEARNING (generic)
 [2026-07-16 13:06:16] INFO | experiment |   Tasks: ['an', 'imp'] | Mode: dual | Strategy: fedavg
 [2026-07-16 13:06:16] INFO | experiment | ============================================================
-[FL-LEAD] 35 clients, 15 test buildings
-[FL-LEAD] 35 active clients, 56934 val, 129708 test windows
-[FL-IMP] 35 clients, 15 test buildings
-[FL-IMP] 35 active clients, 36455 val, 86276 test windows
 [2026-07-16 13:06:29] INFO | experiment |   anomaly      params: 976,623 (head 146,833)
 [2026-07-16 13:06:29] INFO | experiment |   imputation   params: 976,623 (head 146,833)
 [2026-07-16 13:06:29] INFO | experiment |   Shared backbone params: 829,790
