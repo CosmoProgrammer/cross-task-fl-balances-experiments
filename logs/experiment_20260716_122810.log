@@ -1,0 +1,36 @@
+[2026-07-16 12:28:10] INFO | experiment | Device: cuda
+[2026-07-16 12:28:10] INFO | experiment | Cohort: 50 buildings/dataset (tag='(none)') | ashrae=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/ashrae/processed | lead=/home/samy/yuvaraj/cross-task-fl-balances-experiments/data/lead/processed
+[2026-07-16 12:28:10] INFO | experiment | Mamba fused kernels: ON (selective_scan=True, causal_conv1d=True)
+[2026-07-16 12:28:10] INFO | experiment | ============================================================
+[2026-07-16 12:28:10] INFO | experiment | STEP 2b: MULTI-TASK FEDERATED LEARNING (generic)
+[2026-07-16 12:28:10] INFO | experiment |   Tasks: ['an', 'imp'] | Mode: dual | Strategy: fedavg
+[2026-07-16 12:28:10] INFO | experiment | ============================================================
+[2026-07-16 12:28:23] INFO | experiment |   anomaly      params: 976,623 (head 146,833)
+[2026-07-16 12:28:23] INFO | experiment |   imputation   params: 976,623 (head 146,833)
+[2026-07-16 12:28:23] INFO | experiment |   Shared backbone params: 829,790
+[2026-07-16 12:28:23] INFO | experiment | Single-GPU mode on cuda (available: 1, max: 1)
+[2026-07-16 12:28:23] INFO | experiment | Backbone compatibility verified across 2 tasks.
+[2026-07-16 12:28:23] INFO | experiment | Multi-Task Federated Training
+[2026-07-16 12:28:23] INFO | experiment |   Mode: dual | Strategy: fedavg
+[2026-07-16 12:28:23] INFO | experiment |   Task anomaly      (reconstruct): 35 clients
+[2026-07-16 12:28:23] INFO | experiment |   Task imputation   (reconstruct): 35 clients
+[2026-07-16 12:28:23] INFO | experiment |   Total clients:       70
+[2026-07-16 12:28:23] INFO | experiment |   Rounds: 1, Local epochs: 5
+[2026-07-16 12:28:23] INFO | experiment |   GPUs: 1
+[2026-07-16 12:28:23] INFO | experiment | Round 1/1 | 70 clients
+[2026-07-16 12:38:35] INFO | experiment |   [anomaly] 35 clients trained on cuda in 612s
+[2026-07-16 12:47:48] INFO | experiment |   [imputation] 35 clients trained on cuda in 553s
+[2026-07-16 12:48:35] INFO | experiment |   anomaly test MSE: 0.331299 | imputation test MSE: 0.420160 | round 1213s
+[2026-07-16 12:48:36] INFO | experiment | FL training completed in 1212.8s
+[2026-07-16 12:48:36] INFO | experiment | --- Anomaly Detection Evaluation ---
+[2026-07-16 12:49:15] INFO | experiment |   F1: 0.4635
+[2026-07-16 12:49:15] INFO | experiment |   AUC_ROC: 0.7409
+[2026-07-16 12:49:15] INFO | experiment |   AUC_PR: 0.5577
+[2026-07-16 12:49:15] INFO | experiment |   PRECISION: 0.4992
+[2026-07-16 12:49:15] INFO | experiment |   RECALL: 0.4326
+[2026-07-16 12:49:15] INFO | experiment | --- Imputation Evaluation ---
+[2026-07-16 12:49:34] INFO | experiment |   [random] MSE 2.430459 | MAE 0.976452 | WAPE 24.38 | n=2759147
+[2026-07-16 12:49:54] INFO | experiment |   [block] MSE 0.732690 | MAE 0.569497 | WAPE 14.23 | n=2760832
+[2026-07-16 12:49:54] INFO | experiment | Results saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/results/federated_dual_fedavg_tasks-an-imp_results.json
+[2026-07-16 12:49:54] INFO | experiment | Models saved to /home/samy/yuvaraj/cross-task-fl-balances-experiments/checkpoints
+[2026-07-16 12:49:56] INFO | experiment | [DONE] Multi-task federated run complete.
